@@ -1,0 +1,9 @@
+version: 2
+
+models:
+  - name: stg_btc
+    columns:
+      - name: HASH_KEY
+        tests:
+          - not_null
+          - unique
