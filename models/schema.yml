@@ -1,6 +1,7 @@
 version: 2
 
 models:
+
   - name: stg_btc
     columns:
       - name: HASH_KEY
@@ -8,7 +9,9 @@ models:
           - not_null
           - unique
 
+
   - name: whale_alert
+    latest_version: 2
     config:
       contract:
         enforced: true
@@ -27,9 +30,11 @@ models:
 
       - name: current_value_usd
         data_type: float
-
+        
     versions:
-      - v: 1 
+      - v: 1
+        config:
+          enabled: false
       - v: 2
         columns:
           - include: all 

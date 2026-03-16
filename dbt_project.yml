@@ -32,3 +32,5 @@ models:
   btc:
     marts:
       +materialized: view
+      +post-hook:
+        - "{{ create_latest_version_view() }}"
