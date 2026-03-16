@@ -7,3 +7,14 @@ models:
         tests:
           - not_null
           - unique
+
+  - name: stg_btc_outputs
+    tests:
+      - dbt_utils.equal_rowcount:
+          compare_model: ref('stg_btc_outputs_py')
+
+  - name: whale_alert
+    columns:
+      - name: output_address
+        data_tests:
+          - assert_valid_btc_address
