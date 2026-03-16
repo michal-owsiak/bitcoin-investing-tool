@@ -27,3 +27,10 @@ models:
 
       - name: current_value_usd
         data_type: float
+
+    versions:
+      - v: 1 
+      - v: 2
+        columns:
+          - include: all 
+            exclude: [current_value_usd]
