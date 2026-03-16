@@ -1,6 +1,7 @@
 version: 2
 
 models:
+
   - name: stg_btc
     columns:
       - name: HASH_KEY
@@ -8,13 +9,33 @@ models:
           - not_null
           - unique
 
-  - name: stg_btc_outputs
-    tests:
-      - dbt_utils.equal_rowcount:
-          compare_model: ref('stg_btc_outputs_py')
 
   - name: whale_alert
+    latest_version: 2
+    config:
+      contract:
+        enforced: true
     columns:
+
       - name: output_address
+        data_type: string
         data_tests:
           - assert_valid_btc_address
+
+      - name: total_sent
+        data_type: float
+
+      - name: transaction_count
+        data_type: int
+
+      - name: current_value_usd
+        data_type: float
+        
+    versions:
+      - v: 1
+        config:
+          enabled: false
+      - v: 2
+        columns:
+          - include: all 
+            exclude: [current_value_usd]

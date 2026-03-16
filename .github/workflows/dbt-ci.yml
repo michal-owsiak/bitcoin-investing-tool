@@ -1,0 +1,47 @@
+name: dbt CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  dbt-run:
+    runs-on: ubuntu-latest
+    environment: DBT_CRYPTO
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12.10'
+
+      - name: Install dbt
+        run: |
+          python -m pip install --upgrade pip
+          pip install dbt-core==1.9.4 dbt-snowflake==1.9.4
+
+
+      - name: Set up dbt profile and private key
+        run: |
+          mkdir -p ~/.dbt
+          echo "$DBT_PROFILES_YML" > ~/.dbt/profiles.yml
+          echo "$DBT_PRIVATE_KEY" > ~/.dbt/rsa_key.p8
+          chmod 600 ~/.dbt/rsa_key.p8
+        env:
+          DBT_PROFILES_YML: ${{ secrets.DBT_PROFILES_YML }}
+          DBT_PRIVATE_KEY: ${{ secrets.DBT_PRIVATE_KEY }}
+
+
+
+      - name: Install dbt deps
+        run: dbt deps
+
+      - name: Run dbt debug
+        run: dbt debug
+
+      - name: Run dbt
+        run: dbt run

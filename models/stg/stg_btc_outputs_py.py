@@ -4,7 +4,7 @@ import simplejson
 def model(dbt, session):
 
     dbt.config(
-        materialized='table',
+        materialized='incremental',
         packages=[
             'pandas',
             'simplejson'
