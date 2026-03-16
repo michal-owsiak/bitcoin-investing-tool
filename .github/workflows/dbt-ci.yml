@@ -29,8 +29,8 @@ jobs:
         run: |
           mkdir -p ~/.dbt
           echo "$DBT_PROFILES_YML" > ~/.dbt/profiles.yml
-          echo "$DBT_PRIVATE_KEY" > ~/.dbt/rsa_key
-          chmod 600 ~/.dbt/rsa_key
+          echo "$DBT_PRIVATE_KEY" > ~/.dbt/rsa_key.p8
+          chmod 600 ~/.dbt/rsa_key.p8
         env:
           DBT_PROFILES_YML: ${{ secrets.DBT_PROFILES_YML }}
           DBT_PRIVATE_KEY: ${{ secrets.DBT_PRIVATE_KEY }}
