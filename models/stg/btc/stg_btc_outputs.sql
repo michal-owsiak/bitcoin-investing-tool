@@ -12,7 +12,7 @@ with flattened_outputs as (
         stg.is_coinbase,
         f.value:address::string as output_address,
         f.value:value::float as output_value
-    from {{ ref('stg_btc') }} stg, 
+    from {{ ref('stg_btc_base') }} stg, 
         lateral flatten(input => stg.outputs) f
     where 
         f.value:address is not null

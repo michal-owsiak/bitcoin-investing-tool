@@ -5,11 +5,11 @@
 ) }}
 
 select *
-from {{ source('btc', 'btc') }}
+from {{ source('btc', 'transactions') }}
 
 {% if is_incremental() %}
 
-where block_timestamp >= (
+where block_timestamp > (
     select max(block_timestamp)
     from {{ this }}
 )

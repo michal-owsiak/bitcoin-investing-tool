@@ -11,7 +11,7 @@ def model(dbt, session):
         ]
     )
 
-    df = dbt.ref('stg_btc').to_pandas()
+    df = dbt.ref('stg_btc_base').to_pandas()
 
     df['OUTPUTS'] = df['OUTPUTS'].apply(simplejson.loads)
     df_exploded = df.explode('OUTPUTS').reset_index(drop=True)
