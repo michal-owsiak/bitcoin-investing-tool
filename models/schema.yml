@@ -10,7 +10,7 @@ models:
           - unique
 
 
-  - name: whale_alert
+  - name: btc_whale_alert
     latest_version: 2
     config:
       contract:
