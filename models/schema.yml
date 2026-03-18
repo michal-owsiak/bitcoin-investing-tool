@@ -2,9 +2,9 @@ version: 2
 
 models:
 
-  - name: stg_btc
+  - name: stg_btc_base
     columns:
-      - name: HASH_KEY
+      - name: hash_key
         tests:
           - not_null
           - unique
@@ -30,7 +30,7 @@ models:
 
       - name: current_value_usd
         data_type: float
-        
+
     versions:
       - v: 1
         config:
