@@ -11,8 +11,8 @@ with whales as (
 )
 
 select
-    w.output_address,
-    w.total_sent,
-    w.transaction_count
-from whales w
-order by w.total_sent desc
+    output_address,
+    total_sent,
+    transaction_count
+from whales 
+order by total_sent desc
