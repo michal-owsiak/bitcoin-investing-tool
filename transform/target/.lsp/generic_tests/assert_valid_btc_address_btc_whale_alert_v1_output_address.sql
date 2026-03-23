@@ -1,1 +1,0 @@
-{{ test_assert_valid_btc_address(column_name="output_address", model=get_where_subquery(ref('btc_whale_alert', v='1'))) }}
