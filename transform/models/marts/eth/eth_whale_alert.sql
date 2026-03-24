@@ -4,7 +4,7 @@ with whales as (
         to_address,
         sum(value_eth) as total_sent,
         count(*) as transaction_count
-    from {{ ref('stg_eth_value') }}
+    from {{ ref('stg_eth_transactions_valued') }}
     where value_eth >= 100
     group by to_address
 

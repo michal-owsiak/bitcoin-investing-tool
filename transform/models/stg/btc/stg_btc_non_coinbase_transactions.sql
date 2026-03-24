@@ -1,6 +1,8 @@
-{{config(
-    materialized='ephemeral'
-) }}
+{{
+    config(
+        materialized='ephemeral'
+    ) 
+}}
 
 select *
 from 

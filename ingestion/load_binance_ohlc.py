@@ -17,7 +17,7 @@ def main():
 
         if max_time is None:
             start_ms = None
-            print('No existing data found -> full fetch')
+            print('No existing data found -> running full fetch')
         else:
             max_time = pd.to_datetime(max_time)
             start_ms = int(max_time.timestamp() * 1000) + 1

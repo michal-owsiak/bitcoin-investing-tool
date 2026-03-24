@@ -1,7 +1,9 @@
-{{config(
-    materialized='incremental',
-    incremental_strategy='append'
-)}}
+{{
+    config(
+        materialized='incremental',
+        incremental_strategy='append'
+    )
+}}
 
 with flattened_outputs as (
 
@@ -12,17 +14,17 @@ with flattened_outputs as (
         stg.is_coinbase,
         f.value:address::string as output_address,
         f.value:value::float as output_value
-    from {{ ref('stg_btc_base') }} stg, 
+    from {{ ref('stg_btc_transactions') }} stg, 
         lateral flatten(input => stg.outputs) f
     where 
         f.value:address is not null
 
     {% if is_incremental() %}
 
-    and stg.block_timestamp > (
-        select max(block_timestamp)
-        from {{ this }}
-    )
+        and stg.block_timestamp > (
+            select max(block_timestamp)
+            from {{ this }}
+        )
 
     {% endif %}
 )

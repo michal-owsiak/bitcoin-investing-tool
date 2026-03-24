@@ -10,7 +10,7 @@ sources:
       loaded_at_field: block_timestamp
     tables:
       - name: transactions
-  
+
   - name: eth 
     database: crypto
     schema: eth
@@ -20,3 +20,13 @@ sources:
       loaded_at_field: block_timestamp
     tables:
       - name: transactions_raw
+
+  - name: binance
+    database: crypto
+    schema: btc
+    config:
+      freshness:
+        warn_after: {count: 1, period: day}
+      loaded_at_field: open_time
+    tables:
+      - name: binance_btcusdt_1d
