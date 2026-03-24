@@ -88,7 +88,7 @@
             basic_upper_band as final_upper_band,
             basic_lower_band as final_lower_band,
             basic_lower_band as supertrend_value,
-            'up' as trend_direction,
+            'Bullish' as trend_direction,
             rn
         from bands
         where rn = 1
@@ -203,7 +203,7 @@
                             else r.final_upper_band
                         end
                     )
-                then 'up'
+                then 'Bullish'
 
                 when r.supertrend_value = r.final_lower_band
                     and b.close < (
@@ -214,7 +214,7 @@
                             else r.final_lower_band
                         end
                     )
-                then 'down'
+                then 'Bearish'
 
                 else r.trend_direction
             end as trend_direction,

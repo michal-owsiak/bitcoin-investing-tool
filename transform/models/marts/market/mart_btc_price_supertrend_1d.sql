@@ -42,22 +42,22 @@ select
     supertrend_value,
     trend_direction,
     case
-        when trend_direction = 'up' then true
+        when trend_direction = 'Bullish' then true
         else false
     end as is_bull_trend,
     case
-        when trend_direction = 'down' then true
+        when trend_direction = 'Bearish' then true
         else false
     end as is_bear_trend,
     case
-        when prev_trend_direction = 'down'
-            and trend_direction = 'up'
+        when prev_trend_direction = 'Bearish'
+            and trend_direction = 'Bullish'
         then true
         else false
     end as signal_flip_up,
     case
-        when prev_trend_direction = 'up'
-            and trend_direction = 'down'
+        when prev_trend_direction = 'Bullish'
+            and trend_direction = 'Bearish'
         then true
         else false
     end as signal_flip_down
@@ -65,4 +65,3 @@ from
     base
 order by 
     open_time desc
-    

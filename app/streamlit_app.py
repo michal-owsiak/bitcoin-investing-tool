@@ -9,8 +9,20 @@ st.markdown(
     '''
     <style>
 
+    @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap');
+
+    html, body, [data-testid='stAppViewContainer'], [data-testid='stSidebar'], 
+    [data-testid='stMarkdownContainer'],
+    [data-testid='stText'] {
+        font-family: 'Geist', sans-serif !important;
+    }
+
+    *:not(i):not(svg) {
+        font-family: 'Geist', sans-serif !important;
+    }
+
     .block-container {
-        padding-top: 3rem !important;
+        padding-top: 2rem !important;
     }
     
     section[data-testid='stSidebar'] {
@@ -39,7 +51,7 @@ st.markdown(
     }
 
     section[data-testid='stSidebar'] div[role='radiogroup'] label p {
-        font-size: 18px !important;
+        font-size: 18px;
         text-align: center;
     }
 
@@ -72,3 +84,27 @@ halvings_df = get_halvings_data()
 fig = build_price_supertrend_chart(price_df, halvings_df)
 
 st.plotly_chart(fig, use_container_width=True)
+
+
+st.markdown(
+    '''
+    <style>
+    .footer {
+        position: fixed;
+        bottom: 10px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        font-size: 12px;
+        color: #9aa0a6;
+        opacity: 0.7;
+        pointer-events: none;
+    }
+    </style>
+
+    <div class='footer'>
+        © 2026 Michał Owsiak - Bitcoin Investing Tool
+    </div>
+    ''',
+    unsafe_allow_html=True
+)
