@@ -36,7 +36,7 @@ def get_connection():
     )
 
 
-def read_price_supertrend(interval: str = '1w', limit: int = 500) -> pd.DataFrame:
+def read_price_supertrend(interval: str = '1w', limit: int = 3500) -> pd.DataFrame:
     query = f'''
         select *
         from 
