@@ -75,3 +75,27 @@ def read_halvings() -> pd.DataFrame:
 
     return df
 
+
+def read_whale_inflow() -> pd.DataFrame:
+    query = f'''
+        select
+            output_address,
+            total_output_value,
+            transaction_count
+        from 
+            {os.environ['SNOWFLAKE_DATABASE']}.{os.environ['SNOWFLAKE_DBT_SCHEMA']}.MART_BTC_WHALE_ALERT_V2
+        order by 
+            total_output_value desc
+    '''
+
+    conn = get_connection()
+    try:
+        df = pd.read_sql(query, conn)
+    finally:
+        conn.close()
+
+    if not df.empty:
+        df.columns = [col.lower() for col in df.columns]
+        df = df.sort_values('total_output_value', ascending=False).reset_index(drop=True)
+
+    return df

@@ -1,18 +1,33 @@
-with whales as (
+with last_24_hrs as (
+
+    select 
+        output_address,
+        block_timestamp,
+        output_value
+    from 
+        {{ ref('stg_btc_non_coinbase_transactions') }}
+    where 
+        block_timestamp > dateadd(hour, -24, current_timestamp())
+
+),
+
+whales as (
 
     select
         output_address,
-        sum(output_value) as total_sent,
+        sum(output_value) as total_output_value,
         count(*) as transaction_count
-    from {{ ref('stg_btc_non_coinbase_transactions') }}
-    where output_value > 10
-    group by output_address
-
+    from 
+        last_24_hrs
+    group by 
+        output_address
+    having
+        sum(output_value) > 10
 )
 
 select
     output_address,
-    total_sent,
+    total_output_value,
     transaction_count
-from whales 
-order by total_sent desc
+from whales
+order by total_output_value desc
