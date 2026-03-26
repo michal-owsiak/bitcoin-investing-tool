@@ -16,13 +16,13 @@ html, body, [data-testid='stAppViewContainer'], [data-testid='stSidebar'],
 }
 
 h1 {
-    font-size: 34px !important;
+    font-size: 31px !important;
     font-weight: 800 !important;
     padding-bottom: 2rem !important;
 }
 
 h3 {
-    font-size: 20px !important;
+    font-size: 18px !important;
     font-weight: 700 !important;
 }
 
@@ -40,7 +40,7 @@ section[data-testid='stSidebar'] > div {
 }
 
 section[data-testid='stSidebar'] div[data-testid='stRadio'] > label p {
-    font-size: 20px !important;
+    font-size: 18px !important;
     font-weight: 700 !important;
     text-align: center;
 }
@@ -52,23 +52,18 @@ section[data-testid='stSidebar'] div[role='radiogroup'] {
 }
 
 section[data-testid='stSidebar'] div[role='radiogroup'] label p {
-    font-size: 18px;
+    font-size: 16px;
     text-align: center;
 }
 
-[data-testid="stMetricLabel"] {
-    font-size: 16px !important;
-    font-weight: 500;
-}
-
 [data-testid="stMetricValue"] {
-    font-size: 24px !important;
+    font-size: 21px !important;
     font-weight: 600;
 }
 
 .footer {
     position: fixed;
-    bottom: 10px;
+    bottom: 8px;
     left: 0;
     width: 100%;
     text-align: center;

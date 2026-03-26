@@ -22,6 +22,8 @@ def build_whale_inflow_monitor(whales_df: pd.DataFrame) -> go.Figure:
             marker=dict(
                 color="#23a88e"
             ),
+            text=[f'{x/1000:.1f}k' for x in df['total_output_value']],
+            textposition='inside',
             customdata=df[['output_address', 'transaction_count']],
             hovertemplate=(
                 'Address: %{customdata[0]}<br>'
@@ -52,6 +54,13 @@ def build_whale_inflow_monitor(whales_df: pd.DataFrame) -> go.Figure:
         ),
         bargap=0.2,
   
+    )
+
+    fig.update_xaxes(
+        showgrid=True,
+        gridwidth=1,
+        griddash="dot",
+        gridcolor="rgba(120, 120, 120, 0.3)"
     )
 
     return fig

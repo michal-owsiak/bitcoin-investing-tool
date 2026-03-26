@@ -187,10 +187,10 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
             'xanchor': 'center'
         },
         xaxis_title='Date',
-        yaxis_title='Price',
+        yaxis_title='Price (USDT)',
         xaxis_rangeslider_visible=True,
         template='plotly_white',
-        height=800,
+        height=750,
         xaxis=dict(
             range=[start, end + padding]
         ),
