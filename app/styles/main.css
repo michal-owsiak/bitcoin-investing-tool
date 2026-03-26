@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&display=swap');
+
 
 html, body, [data-testid='stAppViewContainer'], [data-testid='stSidebar'], 
 [data-testid='stMarkdownContainer'],
@@ -11,16 +12,22 @@ html, body, [data-testid='stAppViewContainer'], [data-testid='stSidebar'],
 }
 
 .block-container {
-    padding-top: 3rem !important;
+    padding-top: 2rem !important;
+}
+
+h1 {
+    font-size: 34px !important;
+    font-weight: 800 !important;
+    padding-bottom: 2rem !important;
 }
 
 h3 {
-    font-size: 22px !important;
+    font-size: 20px !important;
     font-weight: 700 !important;
 }
 
 section[data-testid='stSidebar'] {
-    width: 200px !important;
+    width: 8% !important;
 }
 
 section[data-testid='stSidebar'] > div {
@@ -33,7 +40,7 @@ section[data-testid='stSidebar'] > div {
 }
 
 section[data-testid='stSidebar'] div[data-testid='stRadio'] > label p {
-    font-size: 24px !important;
+    font-size: 20px !important;
     font-weight: 700 !important;
     text-align: center;
 }
@@ -47,6 +54,16 @@ section[data-testid='stSidebar'] div[role='radiogroup'] {
 section[data-testid='stSidebar'] div[role='radiogroup'] label p {
     font-size: 18px;
     text-align: center;
+}
+
+[data-testid="stMetricLabel"] {
+    font-size: 16px !important;
+    font-weight: 500;
+}
+
+[data-testid="stMetricValue"] {
+    font-size: 24px !important;
+    font-weight: 600;
 }
 
 .footer {

@@ -1,5 +1,5 @@
 import streamlit as st
-from client_snowflake import read_price_supertrend, read_halvings, read_whale_inflow
+from services.snowflake_service import read_price_supertrend, read_halvings, read_whale_inflow
 from charts import build_price_supertrend_chart, build_whale_inflow_monitor
 from utils import load_css
 
@@ -48,7 +48,7 @@ with col_2:
 with col_3:
     st.subheader('BTC Whale Inflow Monitor (24h)')
 
-    st.metric('Whale addresses (> 10 BTC inflow)', len(whales_df))
+    st.metric('Whale addresses (>10 BTC inflow)', len(whales_df))
     st.metric('Total BTC inflow', f"{whales_df['total_output_value'].sum():,.2f}")
     st.metric('Avg inflow / address', f"{whales_df['total_output_value'].mean():,.2f}")
 
