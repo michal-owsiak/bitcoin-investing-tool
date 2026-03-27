@@ -7,17 +7,25 @@ from cryptography.hazmat.backends import default_backend
 
 
 def get_connection():
-    with open(os.environ['SNOWFLAKE_PRIVATE_KEY_PATH'], 'rb') as key_file:
-        p_key = serialization.load_pem_private_key(
-            key_file.read(),
-            password=None,
-            backend=default_backend()
-        )
+    private_key_pem = os.environ['SNOWFLAKE_PRIVATE_KEY'].strip()
+
+    if private_key_pem.startswith(''') and private_key_pem.endswith('''):
+        private_key_pem = private_key_pem[1:-1]
+    if private_key_pem.startswith(''') and private_key_pem.endswith('''):
+        private_key_pem = private_key_pem[1:-1]
+
+    private_key_pem = private_key_pem.replace('\\n', '\n')
+
+    p_key = serialization.load_pem_private_key(
+        private_key_pem.encode('utf-8'),
+        password=None,
+        backend=default_backend()
+    )
 
     pkb = p_key.private_bytes(
         encoding=serialization.Encoding.DER,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
 
     return snowflake.connector.connect(
@@ -26,7 +34,7 @@ def get_connection():
         private_key=pkb,
         warehouse=os.environ['SNOWFLAKE_WAREHOUSE'],
         database=os.environ['SNOWFLAKE_DATABASE'],
-        schema=os.environ['SNOWFLAKE_RAW_SCHEMA'],
+        schema=os.environ['SNOWFLAKE_DBT_SCHEMA'],
         role=os.environ.get('SNOWFLAKE_ROLE'),
     )
 
