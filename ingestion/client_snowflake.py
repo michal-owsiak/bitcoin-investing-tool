@@ -2,18 +2,27 @@ import os
 import pandas as pd
 import snowflake.connector
 import streamlit as st
+from dotenv import load_dotenv
 from snowflake.connector.pandas_tools import write_pandas
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 
 
-def get_secret(name):
-    if name in st.secrets:
-        return st.secrets[name]
-    value = os.getenv(name)
+load_dotenv(Path(__file__).resolve().parents[2] / '.env')
+
+
+def get_secret(name, default=None):
+    try:
+        if name in st.secrets:
+            return st.secrets[name]
+    except Exception:
+        pass
+
+    value = os.getenv(name, default)
     if value is None:
         raise KeyError(f'Missing secret/env: {name}')
     return value
+
 
 def get_connection():
     private_key_pem = get_secret('SNOWFLAKE_PRIVATE_KEY').strip()
@@ -28,7 +37,7 @@ def get_connection():
     p_key = serialization.load_pem_private_key(
         private_key_pem.encode('utf-8'),
         password=None,
-        backend=default_backend()
+        backend=default_backend(),
     )
 
     pkb = p_key.private_bytes(
@@ -38,13 +47,13 @@ def get_connection():
     )
 
     return snowflake.connector.connect(
-        user=os.environ['SNOWFLAKE_USER'],
-        account=os.environ['SNOWFLAKE_ACCOUNT'],
+        user=get_secret('SNOWFLAKE_USER'),
+        account=get_secret('SNOWFLAKE_ACCOUNT'),
         private_key=pkb,
-        warehouse=os.environ['SNOWFLAKE_WAREHOUSE'],
-        database=os.environ['SNOWFLAKE_DATABASE'],
-        schema=os.environ['SNOWFLAKE_DBT_SCHEMA'],
-        role=os.environ.get('SNOWFLAKE_ROLE'),
+        warehouse=get_secret('SNOWFLAKE_WAREHOUSE'),
+        database=get_secret('SNOWFLAKE_DATABASE'),
+        schema=get_secret('SNOWFLAKE_DBT_SCHEMA'),
+        role=get_secret('SNOWFLAKE_ROLE', None),
     )
 
 
