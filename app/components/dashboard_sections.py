@@ -19,7 +19,7 @@ def render_market_summary(summary):
             trend_color = '#999999'
 
         st.markdown(f'''
-            <div style='font-size:12px; color:#23a88e;'>Trend</div>
+            <div style='font-size:12px;'>Trend</div>
             <div style='font-size:20px; font-weight:600; color:{trend_color};'>
                 {trend_text}
             </div>
@@ -50,7 +50,7 @@ def render_market_summary(summary):
                 ret_color = '#23a88e' if ret >= 0 else '#f14c4a'
 
                 st.markdown(f'''
-                <div style='font-size:12px; color:#23a88e;'>Return</div>
+                <div style='font-size:12px'>Return</div>
                 <div style='font-size:20px; font-weight:600; color:{ret_color};'>
                     {ret:.2f}%
                 </div>
