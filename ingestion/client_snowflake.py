@@ -16,7 +16,7 @@ def get_secret(name):
     return value
 
 def get_connection():
-    private_key_pem = get_secret['SNOWFLAKE_PRIVATE_KEY'].strip()
+    private_key_pem = get_secret('SNOWFLAKE_PRIVATE_KEY').strip()
 
     if private_key_pem.startswith('"') and private_key_pem.endswith('"'):
         private_key_pem = private_key_pem[1:-1]
