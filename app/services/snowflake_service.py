@@ -11,13 +11,20 @@ from cryptography.hazmat.backends import default_backend
 env_path = Path(__file__).resolve().parents[1] / '.env'
 load_dotenv(dotenv_path=env_path)
 
+def get_secret(name):
+    if name in st.secrets:
+        return st.secrets[name]
+    value = os.getenv(name)
+    if value is None:
+        raise KeyError(f'Missing secret/env: {name}')
+    return value
 
 def get_connection():
-    private_key_pem = os.environ['SNOWFLAKE_PRIVATE_KEY'].strip()
+    private_key_pem = get_secret['SNOWFLAKE_PRIVATE_KEY'].strip()
 
-    if private_key_pem.startswith(''') and private_key_pem.endswith('''):
+    if private_key_pem.startswith('"') and private_key_pem.endswith('"'):
         private_key_pem = private_key_pem[1:-1]
-    if private_key_pem.startswith(''') and private_key_pem.endswith('''):
+    if private_key_pem.startswith("'") and private_key_pem.endswith("'"):
         private_key_pem = private_key_pem[1:-1]
 
     private_key_pem = private_key_pem.replace('\\n', '\n')

@@ -1,17 +1,26 @@
 import os
 import pandas as pd
 import snowflake.connector
+import streamlit as st
 from snowflake.connector.pandas_tools import write_pandas
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 
 
-def get_connection():
-    private_key_pem = os.environ['SNOWFLAKE_PRIVATE_KEY'].strip()
+def get_secret(name):
+    if name in st.secrets:
+        return st.secrets[name]
+    value = os.getenv(name)
+    if value is None:
+        raise KeyError(f'Missing secret/env: {name}')
+    return value
 
-    if private_key_pem.startswith(''') and private_key_pem.endswith('''):
+def get_connection():
+    private_key_pem = get_secret['SNOWFLAKE_PRIVATE_KEY'].strip()
+
+    if private_key_pem.startswith('"') and private_key_pem.endswith('"'):
         private_key_pem = private_key_pem[1:-1]
-    if private_key_pem.startswith(''') and private_key_pem.endswith('''):
+    if private_key_pem.startswith("'") and private_key_pem.endswith("'"):
         private_key_pem = private_key_pem[1:-1]
 
     private_key_pem = private_key_pem.replace('\\n', '\n')
