@@ -20,10 +20,11 @@ def build_whale_inflow_monitor(whales_df: pd.DataFrame) -> go.Figure:
             y=df['whale_label'],
             orientation='h',
             marker=dict(
-                color="#23a88e"
+                color='#23a88e'
             ),
             text=[f'{x/1000:.1f}k' for x in df['total_output_value']],
             textposition='inside',
+            insidetextanchor='middle',
             customdata=df[['output_address', 'transaction_count']],
             hovertemplate=(
                 'Address: %{customdata[0]}<br>'
@@ -35,24 +36,18 @@ def build_whale_inflow_monitor(whales_df: pd.DataFrame) -> go.Figure:
     )
 
     fig.update_layout(
-        title={
-            'text': 'Top Whale Inflows',
-            'x': 0.5,
-            'xanchor': 'center'
-        },
         xaxis_title='Inflow (BTC)',
         yaxis_title='',
-        template='plotly_white',
         height=450,
         font=dict(
-            family='Geist',
-            size=12,
+            family='Archivo',
+            size=12
         ),
-        margin=dict(l=0, r=50, t=100, b=50),
+        margin=dict(l=0, r=50, t=0, b=50),
         yaxis=dict(
             automargin=True
         ),
-        bargap=0.2,
+        bargap=0.3,
   
     )
 

@@ -1,5 +1,7 @@
 import streamlit as st
-from utils import load_css
+from pathlib import Path
+from dotenv import load_dotenv
+from utils.load_css import load_css
 from services.data_loader import (
     get_price_data,
     get_halvings_data,
@@ -11,17 +13,22 @@ from components.dashboard_sections import (
     render_market_summary
 )
 
-
-load_css('styles/main.css')
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+load_css('../styles/main.css')
 st.set_page_config(page_title='Bitcoin Investing Tool', layout='wide')
 
-st.title('Bitcoin Investing Tool')
 
-timeframe = st.sidebar.radio(
-    'Timeframe',
-    options=['1W', '1D'],
-    index=0
-)
+header_col_1, header_col_2 = st.columns([5, 1.7])
+
+with header_col_1:
+    st.title('Bitcoin Investing Tool')
+
+with header_col_2:
+    timeframe = st.segmented_control(
+        label="",
+        options=['1W', '1D'],
+        default='1W'
+    )
 
 price_df = get_price_data(timeframe)
 halvings_df = get_halvings_data()
@@ -47,6 +54,15 @@ with col_3:
     st.metric('Total BTC inflow', f'{whales_df['total_output_value'].sum():,.2f}')
     st.metric('Avg inflow / address', f'{whales_df['total_output_value'].mean():,.2f}')
 
+    st.markdown(
+        '''
+            <h4 style>
+                Top Whale Inflows
+            </h4>    
+        ''',
+        unsafe_allow_html=True
+    )
+
     st.plotly_chart(whale_fig, use_container_width=True)
 
 
@@ -58,6 +74,8 @@ st.markdown(
     '''
         <div class='footer'>
             © 2026 Michał Owsiak - Bitcoin Investing Tool
+            <br/>
+            <br/>
         </div>
     ''',
     unsafe_allow_html=True

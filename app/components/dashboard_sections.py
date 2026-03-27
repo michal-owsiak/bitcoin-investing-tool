@@ -63,10 +63,10 @@ def render_market_summary(summary):
         st.write('')
         st.markdown(f'''
             <div style='font-size:13px; color:#3a3a3a; line-height:1.4;'>
-                Entry price: <strong>{summary['entry_price']:,.2f}</strong>
+                Entry price: <strong>${summary['entry_price']:,.2f}</strong>
             </div>
             <div style='font-size:13px; color:#3a3a3a; line-height:1.4;'>
-                Current price: <strong>{summary['current_price']:,.2f}</strong>
+                Current price: <strong>${summary['current_price']:,.2f}</strong>
             </div>
         ''', unsafe_allow_html=True)
 

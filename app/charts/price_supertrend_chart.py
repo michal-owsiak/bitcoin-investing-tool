@@ -54,7 +54,7 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
             whiskerwidth=0,
             customdata=price_df[['OPEN', 'HIGH', 'LOW', 'CLOSE', 'VOLUME', 'NUMBER_OF_TRADES']],
             hovertemplate=(
-                'Date: %{x|%Y-%m-%d}<br>'
+                'Open date: %{x|%Y-%m-%d}<br>'
                 'Open: $%{customdata[0]:,.2f}<br>'
                 'High: $%{customdata[1]:,.2f}<br>'
                 'Low: $%{customdata[2]:,.2f}<br>'
@@ -174,14 +174,14 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
 
     fig.update_layout(
         font=dict(
-            family='Geist',
+            family='Archivo',
             size=13,
         ),
         title={
             'text': 'BTC Price with Supertrend',
             'font': dict(
-                family='Geist',
-                size=22,
+                family='Archivo',
+                size=19,
             ),
             'x': 0.5,
             'xanchor': 'center'
