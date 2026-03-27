@@ -1,9 +1,9 @@
 version: 2
 
 sources:
-  - name: btc
+  - name: blockchain
     database: crypto
-    schema: btc
+    schema: raw
     config:
       freshness:
         warn_after: {count: 1, period: day}
@@ -11,19 +11,9 @@ sources:
     tables:
       - name: transactions
 
-  - name: eth 
-    database: crypto
-    schema: eth
-    config:
-      freshness:
-        warn_after: {count: 1, period: day}
-      loaded_at_field: block_timestamp
-    tables:
-      - name: transactions_raw
-
   - name: binance
     database: crypto
-    schema: btc
+    schema: raw
     config:
       freshness:
         warn_after: {count: 1, period: day}

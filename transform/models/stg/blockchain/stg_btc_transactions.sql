@@ -7,7 +7,7 @@
 }}
 
 select *
-from {{ source('btc', 'transactions') }}
+from {{ source('blockchain', 'transactions') }}
 
 {% if is_incremental() %}
 

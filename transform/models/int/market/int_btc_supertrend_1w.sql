@@ -6,7 +6,7 @@
 
 {{ 
     build_supertrend(
-        ref('int_btcusdt_1w'),
+        ref('int_btc_price_1w'),
         '1w',
         10,
         3

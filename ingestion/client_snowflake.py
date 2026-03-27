@@ -2,16 +2,31 @@ import os
 import pandas as pd
 import snowflake.connector
 from snowflake.connector.pandas_tools import write_pandas
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
 
 
 def get_connection():
+    with open(os.environ['SNOWFLAKE_PRIVATE_KEY_PATH'], 'rb') as key_file:
+        p_key = serialization.load_pem_private_key(
+            key_file.read(),
+            password=None,
+            backend=default_backend()
+        )
+
+    pkb = p_key.private_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+
     return snowflake.connector.connect(
         user=os.environ['SNOWFLAKE_USER'],
-        password=os.environ['SNOWFLAKE_PASSWORD'],
         account=os.environ['SNOWFLAKE_ACCOUNT'],
+        private_key=pkb,
         warehouse=os.environ['SNOWFLAKE_WAREHOUSE'],
         database=os.environ['SNOWFLAKE_DATABASE'],
-        schema=os.environ['SNOWFLAKE_SCHEMA'],
+        schema=os.environ['SNOWFLAKE_RAW_SCHEMA'],
         role=os.environ.get('SNOWFLAKE_ROLE'),
     )
 
@@ -27,7 +42,7 @@ def get_max_open_time(conn):
     with conn.cursor() as cur:
         cur.execute(f'use warehouse {os.environ['SNOWFLAKE_WAREHOUSE']}')
         cur.execute(f'use database {os.environ['SNOWFLAKE_DATABASE']}')
-        cur.execute(f'use schema {os.environ['SNOWFLAKE_SCHEMA']}')
+        cur.execute(f'use schema {os.environ['SNOWFLAKE_RAW_SCHEMA']}')
         cur.execute(query)
         row = cur.fetchone()
 
@@ -43,7 +58,7 @@ def load_to_snowflake(df):
         with conn.cursor() as cur:
             cur.execute(f'use warehouse {os.environ['SNOWFLAKE_WAREHOUSE']}')
             cur.execute(f'use database {os.environ['SNOWFLAKE_DATABASE']}')
-            cur.execute(f'use schema {os.environ['SNOWFLAKE_SCHEMA']}')
+            cur.execute(f'use schema {os.environ['SNOWFLAKE_RAW_SCHEMA']}')
 
         df = df.copy()
         df.columns = [c.upper() for c in df.columns]
@@ -53,7 +68,7 @@ def load_to_snowflake(df):
             df=df,
             table_name='BINANCE_BTCUSDT_1D',
             database=os.environ['SNOWFLAKE_DATABASE'],
-            schema=os.environ['SNOWFLAKE_SCHEMA'],
+            schema=os.environ['SNOWFLAKE_RAW_SCHEMA'],
             auto_create_table=False,
             overwrite=False,
             use_logical_type=True,
