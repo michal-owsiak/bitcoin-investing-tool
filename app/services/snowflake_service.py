@@ -32,6 +32,17 @@ def get_connection():
 
     private_key_pem = private_key_pem.strip().encode("utf-8")
 
+    lines = private_key_pem.splitlines()
+
+    st.write({
+        "line_count": len(lines),
+        "first_line": lines[0] if lines else None,
+        "last_line": lines[-1] if lines else None,
+        "contains_backslash_n": "\\n" in private_key_pem,
+    })
+
+    st.stop()
+
     p_key = serialization.load_pem_private_key(
         private_key_pem,
         password=None
@@ -53,17 +64,6 @@ def get_connection():
         role=get_secret('SNOWFLAKE_ROLE', None),
     )
 
-    lines = private_key_pem.splitlines()
-
-    st.write({
-        "line_count": len(lines),
-        "first_line": lines[0] if lines else None,
-        "last_line": lines[-1] if lines else None,
-        "contains_backslash_n": "\\n" in private_key_pem,
-    })
-
-
-    return None
 
 def read_price_supertrend(interval: str = '1w', limit: int = 3500) -> pd.DataFrame:
     query = f'''
