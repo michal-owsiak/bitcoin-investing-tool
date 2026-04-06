@@ -26,7 +26,7 @@ def get_secret(name, default=None):
 def get_connection():
 
     private_key_pem = get_secret("SNOWFLAKE_PRIVATE_KEY").strip()
-    
+
     if "\\n" in private_key_pem:
         private_key_pem = private_key_pem.replace("\\n", "\n")
 
@@ -52,6 +52,18 @@ def get_connection():
         schema=get_secret('SNOWFLAKE_DBT_SCHEMA'),
         role=get_secret('SNOWFLAKE_ROLE', None),
     )
+
+    lines = private_key_pem.splitlines()
+
+    st.write({
+        "line_count": len(lines),
+        "first_line": lines[0] if lines else None,
+        "last_line": lines[-1] if lines else None,
+        "contains_backslash_n": "\\n" in private_key_pem,
+    })
+
+
+    return None
 
 def read_price_supertrend(interval: str = '1w', limit: int = 3500) -> pd.DataFrame:
     query = f'''
