@@ -13,9 +13,10 @@ from components.dashboard_sections import (
     render_market_summary
 )
 
+st.set_page_config(page_title='Bitcoin Investing Tool', layout='wide')
+
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 load_css('../styles/main.css')
-st.set_page_config(page_title='Bitcoin Investing Tool', layout='wide')
 
 
 header_col_1, header_col_2 = st.columns([5, 1.7])
