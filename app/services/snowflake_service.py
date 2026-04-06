@@ -31,8 +31,6 @@ def get_connection():
 
     private_key_pem = private_key_pem.replace("\r\n", "\n").replace("\r", "\n")
 
-    st.write(private_key_pem.splitlines())
-
     p_key = serialization.load_pem_private_key(
         private_key_pem.encode("utf-8"),
         password=None,
