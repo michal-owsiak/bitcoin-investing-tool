@@ -27,15 +27,8 @@ def get_connection():
     private_key_pem = get_secret("SNOWFLAKE_PRIVATE_KEY").strip()
     private_key_pem = private_key_pem.replace("\\n", "\n").strip().encode("utf-8")
 
-    if private_key_pem.startswith('"') and private_key_pem.endswith('"'):
-        private_key_pem = private_key_pem[1:-1]
-    if private_key_pem.startswith("'") and private_key_pem.endswith("'"):
-        private_key_pem = private_key_pem[1:-1]
-
-    private_key_pem = private_key_pem.replace('\\n', '\n')
-
     p_key = serialization.load_pem_private_key(
-        private_key_pem.encode('utf-8'),
+        private_key_pem,
         password=None
     )
 
@@ -54,7 +47,6 @@ def get_connection():
         schema=get_secret('SNOWFLAKE_DBT_SCHEMA'),
         role=get_secret('SNOWFLAKE_ROLE', None),
     )
-
 
 def read_price_supertrend(interval: str = '1w', limit: int = 3500) -> pd.DataFrame:
     query = f'''
