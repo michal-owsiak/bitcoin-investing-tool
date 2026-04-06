@@ -24,8 +24,13 @@ def get_secret(name, default=None):
 
 
 def get_connection():
+
     private_key_pem = get_secret("SNOWFLAKE_PRIVATE_KEY").strip()
-    private_key_pem = private_key_pem.replace("\\n", "\n").strip().encode("utf-8")
+    
+    if "\\n" in private_key_pem:
+        private_key_pem = private_key_pem.replace("\\n", "\n")
+
+    private_key_pem = private_key_pem.strip().encode("utf-8")
 
     p_key = serialization.load_pem_private_key(
         private_key_pem,
