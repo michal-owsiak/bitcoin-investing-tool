@@ -6,10 +6,10 @@ __pycache__/
 *.pyc
 
 # dbt
-transform/target/
-transform/dbt_packages/
-transform/logs/
-transform/dbt_internal_packages/
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+dbt/dbt_internal_packages/
 logs/
 
 # env
