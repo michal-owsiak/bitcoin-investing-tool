@@ -52,17 +52,17 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
             decreasing_fillcolor='#ef5350',
             decreasing_line_color='#ef5350',
             whiskerwidth=0,
-            customdata=price_df[['OPEN', 'HIGH', 'LOW', 'CLOSE', 'VOLUME', 'NUMBER_OF_TRADES']],
-            hovertemplate=(
-                'Open date: %{x|%Y-%m-%d}<br>'
-                'Open: $%{customdata[0]:,.2f}<br>'
-                'High: $%{customdata[1]:,.2f}<br>'
-                'Low: $%{customdata[2]:,.2f}<br>'
-                'Close: $%{customdata[3]:,.2f}<br>'
-                'Volume: %{customdata[4]:,.2f}<br>'
-                'Trades: %{customdata[5]:,.0f}'
-                '<extra></extra>'
-            )
+            # customdata=price_df[['OPEN', 'HIGH', 'LOW', 'CLOSE', 'VOLUME', 'NUMBER_OF_TRADES']],
+            # hovertemplate=(
+            #     'Open date: %{x|%Y-%m-%d}<br>'
+            #     'Open: $%{customdata[0]:,.2f}<br>'
+            #     'High: $%{customdata[1]:,.2f}<br>'
+            #     'Low: $%{customdata[2]:,.2f}<br>'
+            #     'Close: $%{customdata[3]:,.2f}<br>'
+            #     'Volume: %{customdata[4]:,.2f}<br>'
+            #     'Trades: %{customdata[5]:,.0f}'
+            #     '<extra></extra>'
+            # )
         )
     )
 
