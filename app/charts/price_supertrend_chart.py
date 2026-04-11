@@ -8,9 +8,20 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
     fig = go.Figure()
 
     price_df = price_df.copy()
+    price_df['OPEN_TIME'] = pd.to_datetime(price_df['OPEN_TIME'], errors='coerce')
+
+    numeric_cols = ['OPEN', 'HIGH', 'LOW', 'CLOSE', 'VOLUME', 'NUMBER_OF_TRADES']
+    for col in numeric_cols:
+        price_df[col] = pd.to_numeric(price_df[col], errors='coerce')
+
+    price_df = price_df.dropna(subset=['OPEN_TIME', 'OPEN', 'HIGH', 'LOW', 'CLOSE'])
     price_df = price_df.sort_values('OPEN_TIME').reset_index(drop=True)
 
-    start = price_df['OPEN_TIME'].iloc[-400]
+    if price_df.empty:
+        raise ValueError("price_df is empty after cleaning")
+
+    window = min(400, len(price_df))
+    start = price_df['OPEN_TIME'].iloc[-window]
     end = price_df['OPEN_TIME'].iloc[-1]
     padding = (end - start) * 0.07
 
@@ -28,9 +39,7 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
             name='Volume',
             yaxis='y2',
             opacity=0.22,
-            marker=dict(
-                color='#94a3b8'
-            ),
+            marker=dict(color='#94a3b8'),
             hovertemplate=(
                 'Date: %{x|%Y-%m-%d}<br>'
                 'Volume: %{y:,.2f}'
@@ -52,7 +61,22 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
             decreasing_fillcolor='#ef5350',
             decreasing_line_color='#ef5350',
             whiskerwidth=0,
-            customdata=price_df[['OPEN', 'HIGH', 'LOW', 'CLOSE', 'VOLUME', 'NUMBER_OF_TRADES']],
+            hoverinfo='skip'
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=price_df['OPEN_TIME'],
+            y=(price_df['HIGH'] + price_df['LOW']) / 2,
+            mode='markers',
+            name='BTC Hover',
+            showlegend=False,
+            marker=dict(
+                size=18,
+                color='rgba(0,0,0,0)'
+            ),
+            customdata=price_df[['OPEN', 'HIGH', 'LOW', 'CLOSE', 'VOLUME', 'NUMBER_OF_TRADES']].to_numpy(),
             hovertemplate=(
                 'Open date: %{x|%Y-%m-%d}<br>'
                 'Open: $%{customdata[0]:,.2f}<br>'
@@ -100,7 +124,7 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
                     color='green',
                     line=dict(width=0)
                 ),
-                customdata=flip_up_df[['CLOSE']],
+                customdata=flip_up_df[['CLOSE']].to_numpy(),
                 hovertemplate=(
                     'Bullish Flip<br>'
                     'Date: %{x|%Y-%m-%d}<br>'
@@ -123,7 +147,7 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
                     color='red',
                     line=dict(width=0)
                 ),
-                customdata=flip_down_df[['CLOSE']],
+                customdata=flip_down_df[['CLOSE']].to_numpy(),
                 hovertemplate=(
                     'Bearish Flip<br>'
                     'Date: %{x|%Y-%m-%d}<br>'
@@ -145,7 +169,7 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
                 x0=halving_dt,
                 x1=halving_dt,
                 y0=y_min,
-                y1=y_max + (y_range * 0.15),  
+                y1=y_max + (y_range * 0.15),
                 xref='x',
                 yref='y',
                 line=dict(
@@ -210,6 +234,7 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
             font_size=13,
             font_family='Geist'
         ),
+        hovermode='closest',
         barmode='overlay'
     )
 
