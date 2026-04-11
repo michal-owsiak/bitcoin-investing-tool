@@ -195,13 +195,16 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
             range=[start, end + padding]
         ),
         yaxis=dict(
-            range=[y_min, y_max + (y_range * 0.18)]
+            range=[y_min, y_max + (y_range * 0.18)],
+            side='right',
+            title='Price (USDT)'
         ),
         yaxis2=dict(
             title='Volume',
             overlaying='y',
-            side='right',
-            showgrid=False
+            side='left',
+            showgrid=False,
+            position=0.0
         ),
         hoverlabel=dict(
             font_size=13,
