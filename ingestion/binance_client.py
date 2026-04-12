@@ -61,4 +61,7 @@ def fetch_klines(symbol='BTCUSDT', interval='1d', start_time=None):
     df['interval'] = interval
     df['ingested_at'] = pd.Timestamp.utcnow().tz_localize(None)
 
+    now_utc = pd.Timestamp.utcnow().tz_localize(None)
+    df = df[df['close_time'] <= now_utc]
+
     return df.drop(columns=['ignore'])
