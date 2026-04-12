@@ -1,11 +1,16 @@
+import sys
 import pandas as pd
 from pathlib import Path
 from dotenv import load_dotenv
-from ingestion.binance_client import fetch_klines
-from ingestion.snowflake_service import get_connection, get_max_open_time, load_to_snowflake
 
-env_path = Path(__file__).resolve().parents[1] / '.env'
+project_root = Path(__file__).resolve().parents[1]
+env_path = project_root / '.env'
 load_dotenv(dotenv_path=env_path)
+
+sys.path.append(str(project_root))
+from shared.snowflake_client import get_connection
+from ingestion.binance_client import fetch_klines
+from ingestion.snowflake_service import get_max_open_time, load_to_snowflake
 
 
 def run_ingestion():
@@ -29,5 +34,5 @@ def run_ingestion():
     if df.empty:
         print('No new data')
         return
-
-    run_ingestion(df)
+    
+    load_to_snowflake(df)
