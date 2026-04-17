@@ -60,7 +60,7 @@ def btc_pipeline():
     )
     def run_dbt():
         result = subprocess.run(
-            ['dbt', 'run'],
+            ['dbt', 'run', '--profiles-dir', str(project_root / 'dbt')],
             cwd=(project_root / 'dbt'),
             capture_output=True,
             text=True
