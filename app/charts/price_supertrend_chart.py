@@ -36,7 +36,7 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
         go.Bar(
             x=price_df['OPEN_TIME'],
             y=price_df['VOLUME'],
-            name='Volume',
+            name='Volume (Binance)',
             yaxis='y2',
             opacity=0.22,
             marker=dict(color='#94a3b8'),

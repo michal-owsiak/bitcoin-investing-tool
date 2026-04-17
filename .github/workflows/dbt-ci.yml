@@ -35,13 +35,13 @@ jobs:
           DBT_PRIVATE_KEY: ${{ secrets.DBT_PRIVATE_KEY }}
 
       - name: Install dbt deps
-        working-directory: ./transform
+        working-directory: ./dbt
         run: dbt deps
 
       - name: Run dbt debug
-        working-directory: ./transform
+        working-directory: ./dbt
         run: dbt debug
 
       - name: Run dbt
-        working-directory: ./transform
+        working-directory: ./dbt
         run: dbt run

@@ -1,0 +1,132 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${_POSTGRES_DB}
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${_POSTGRES_USER}"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+  airflow-init:
+    build: .
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${_POSTGRES_USER}:${_POSTGRES_PASSWORD}@postgres/${_POSTGRES_DB}
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-webserver:8080/execution/
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_API_AUTH_JWT_SECRET}
+      AIRFLOW__API__SECRET_KEY: ${AIRFLOW_API_SECRET_KEY}
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_WEBSERVER_SECRET_KEY}
+      PYTHONPATH: /opt/airflow
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ../shared:/opt/airflow/shared
+      - ../ingestion:/opt/airflow/ingestion
+      - ../dbt:/opt/airflow/dbt
+      - ../keys:/opt/airflow/keys
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ~/.dbt:/home/airflow/.dbt
+    command: ["bash", "-c", "airflow db migrate"]
+
+  airflow-webserver:
+    build: .
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${_POSTGRES_USER}:${_POSTGRES_PASSWORD}@postgres/${_POSTGRES_DB}
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-webserver:8080/execution/
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_API_AUTH_JWT_SECRET}
+      AIRFLOW__API__SECRET_KEY: ${AIRFLOW_API_SECRET_KEY}
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_WEBSERVER_SECRET_KEY}
+      PYTHONPATH: /opt/airflow
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./simple_auth_passwords.json:/opt/airflow/simple_auth_passwords.json
+      - ../shared:/opt/airflow/shared
+      - ../ingestion:/opt/airflow/ingestion
+      - ../dbt:/opt/airflow/dbt
+      - ../keys:/opt/airflow/keys
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ~/.dbt:/home/airflow/.dbt
+    ports:
+      - "8080:8080"
+    command: api-server
+
+  airflow-scheduler:
+    build: .
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${_POSTGRES_USER}:${_POSTGRES_PASSWORD}@postgres/${_POSTGRES_DB}
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-webserver:8080/execution/
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_API_AUTH_JWT_SECRET}
+      AIRFLOW__API__SECRET_KEY: ${AIRFLOW_API_SECRET_KEY}
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_WEBSERVER_SECRET_KEY}
+      PYTHONPATH: /opt/airflow
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./simple_auth_passwords.json:/opt/airflow/simple_auth_passwords.json
+      - ../shared:/opt/airflow/shared
+      - ../ingestion:/opt/airflow/ingestion
+      - ../dbt:/opt/airflow/dbt
+      - ../keys:/opt/airflow/keys
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ~/.dbt:/home/airflow/.dbt
+    command: scheduler
+
+  airflow-dag-processor:
+    build: .
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${_POSTGRES_USER}:${_POSTGRES_PASSWORD}@postgres/${_POSTGRES_DB}
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-webserver:8080/execution/
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_API_AUTH_JWT_SECRET}
+      AIRFLOW__API__SECRET_KEY: ${AIRFLOW_API_SECRET_KEY}
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_WEBSERVER_SECRET_KEY}
+      PYTHONPATH: /opt/airflow
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./simple_auth_passwords.json:/opt/airflow/simple_auth_passwords.json
+      - ../shared:/opt/airflow/shared
+      - ../ingestion:/opt/airflow/ingestion
+      - ../dbt:/opt/airflow/dbt
+      - ../keys:/opt/airflow/keys
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ~/.dbt:/home/airflow/.dbt
+    command: dag-processor
+
+volumes:
+  postgres-db-volume:

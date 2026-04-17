@@ -1,16 +1,36 @@
-# macOS
+# OS & IDE
 .DS_Store
+.vscode/
+.idea/
 
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
 
-# dbt
-transform/target/
-transform/dbt_packages/
-transform/logs/
-transform/dbt_internal_packages/
+# Airflow (logs, runtime, secrets)
+airflow/logs/
+airflow/*.pid
+airflow/simple_auth_passwords.json
+airflow/keys/*
+!airflow/keys/.gitkeep
+!airflow/keys/README.md
+
+# dbt (artifacts + credentials)
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/dbt_internal_packages/
+dbt/profiles.yml
+~/.dbt/
+
+# Logs (global)
 logs/
+*.log
 
-# env
+# secrets & envs
+venv/
 .env
+*.env
+keys/*
+!keys/.gitkeep
+!keys/README.md

@@ -3,5 +3,4 @@ plotly==6.6.0
 pandas==2.2.3
 snowflake-connector-python[pandas]==3.12.4
 pyOpenSSL>=24,<25
-cryptography>=41,<43
 python-dotenv==1.0.1
