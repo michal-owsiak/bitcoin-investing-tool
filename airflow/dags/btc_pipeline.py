@@ -60,20 +60,28 @@ def btc_pipeline():
     )
     def run_dbt():
         result = subprocess.run(
-            ['dbt', 'run', '--profiles-dir', str(project_root / 'dbt')],
-            cwd=(project_root / 'dbt'),
+            [
+                "/home/airflow/.local/bin/dbt",
+                "run",
+                "--project-dir", str(project_root / "dbt"),
+                "--profiles-dir", str(project_root / "dbt"),
+            ],
+            cwd=str(project_root / "dbt"),
             capture_output=True,
-            text=True
+            text=True,
         )
 
-        print('DBT STDOUT')
+        print("DBT RETURN CODE")
+        print(result.returncode)
+        print("DBT STDOUT")
         print(result.stdout)
-
-        print('DBT STDERR')
+        print("DBT STDERR")
         print(result.stderr)
 
         if result.returncode != 0:
-            raise Exception(f'DBT FAILED:\n{result.stdout}\n{result.stderr}')
+            raise Exception(
+                f"DBT FAILED:\nreturn code={result.returncode}\nstdout={result.stdout}\nstderr={result.stderr}"
+            )
 
 
     run_snowflake_task() >> run_binance_ingestion() >> run_dbt()
