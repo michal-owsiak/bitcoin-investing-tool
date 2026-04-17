@@ -66,11 +66,14 @@ def btc_pipeline():
             text=True
         )
 
+        print('DBT STDOUT')
         print(result.stdout)
 
+        print('DBT STDERR')
+        print(result.stderr)
+
         if result.returncode != 0:
-            print(result.stderr)
-            raise Exception(f'dbt run failed: {result.stderr}')
+            raise Exception(f'DBT FAILED:\n{result.stdout}\n{result.stderr}')
 
 
     run_snowflake_task() >> run_binance_ingestion() >> run_dbt()
