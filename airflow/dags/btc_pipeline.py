@@ -39,7 +39,7 @@ def btc_pipeline():
                 cur.execute(f'use database {database}')
                 cur.execute(f'use schema {schema}')
                 cur.execute(query)
-                print(f'Executed Snowflake task '{task_name}'')
+                print(f"Executed Snowflake task '{task_name}'")
         finally:
             cur.close()
             conn.close()
