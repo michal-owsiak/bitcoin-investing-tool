@@ -29,7 +29,7 @@ def get_secret(name, default=None):
 
 
 def get_connection():
-    private_key_path = get_secret("SNOWFLAKE_PRIVATE_KEY_PATH").strip()
+    private_key_path = get_secret("SNOWFLAKE_PRIVATE_KEY").strip()
 
     if private_key_path.startswith('"') and private_key_path.endswith('"'):
         private_key_path = private_key_path[1:-1]
