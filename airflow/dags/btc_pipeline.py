@@ -73,7 +73,10 @@ def btc_pipeline():
             capture_output=True,
             text=True,
         )
-        
+
+        print(f'DBT DEPS RETURN CODE: {deps.returncode}')
+        print(deps.stdout)
+
         if deps.returncode != 0:
             raise Exception(
                 f'DBT DEPS FAILED:\nreturn code={deps.returncode}\nstdout={deps.stdout}\nstderr={deps.stderr}'
@@ -91,10 +94,13 @@ def btc_pipeline():
             text=True,
         )
 
+        print(f'DBT RUN RETURN CODE: {result.returncode}')
+        print(result.stdout)
+
         if result.returncode != 0:
             raise Exception(
                 f'DBT FAILED:\nreturn code={result.returncode}\nstdout={result.stdout}\nstderr={result.stderr}'
-        )
+            )
 
 
     run_snowflake_task() >> run_binance_ingestion() >> run_dbt()
