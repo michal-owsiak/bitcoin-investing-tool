@@ -6,7 +6,7 @@ An end-to-end data engineering project and analytical application designed to su
 
 ## **Architecture**
 
-![Architecture](https://i.postimg.cc/MZFm3CJg/Group-12.jpg)
+![Architecture](./architecture.jpg)
 
 ------------------------------------------------------------------------
 
@@ -30,7 +30,7 @@ reloads.
 ------------------------------------------------------------------------
 ## **Application**
 
-![Application](https://i.postimg.cc/BQxcZNVN/screenshot.jpg)
+![Application](./app_screenshot.jpg)
 
 ### **Key Components**
 
