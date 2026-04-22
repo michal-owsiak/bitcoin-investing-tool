@@ -114,31 +114,34 @@ Below is a simplified overview of the project structure to help navigate the cod
 ``` bash
 bitcoin-investing-tool/
 │
-├── airflow/                 # Workflow orchestration (Apache Airflow)
-│   ├── dags/                # DAG definitions
-│   ├── Dockerfile           # Airflow container setup
-│   └── docker-compose.yml   # Local orchestration environment
+├── airflow/                   # Workflow orchestration (Apache Airflow)
+│   ├── dags/                  # DAG definitions
+│   ├── Dockerfile             # Airflow container setup
+│   └── docker-compose.yml     # Local orchestration environment
 │
-├── ingestion/               # Market data ingestion (Binance API)
+├── ingestion/                 # Market data ingestion (Binance API)
+│   ├── binance_client.py      # API client for fetching market data from Binance
+│   ├── snowflake_service.py   # Handles watermark retrieval and data loading into Snowflake
+│   └── load_binance_ohlc.py   # Orchestrates OHLC ingestion using Binance client and Snowflake service
 │
-├── dbt/                     # Data transformation layer (ELT)
+├── dbt/                       # Data transformation layer (ELT)
 │   ├── models/
-│   │   ├── stg/             # Raw data cleaning and normalization
-│   │   ├── int/             # Reusable intermediate transformations
-│   │   └── marts/           # Final analytical data layer
-│   ├── macros/              # Reusable SQL logic
-│   ├── seeds/               # Static data loaded into warehouse
-│   └── tests/               # Data quality checks
+│   │   ├── stg/               # Raw data cleaning and normalization
+│   │   ├── int/               # Reusable intermediate transformations
+│   │   └── marts/             # Final analytical data layer
+│   ├── macros/                # Reusable SQL logic
+│   ├── seeds/                 # Static data loaded into warehouse
+│   └── tests/                 # Data quality checks
 │
-├── app/                     # Streamlit application (serving layer)
-│   ├── charts/              # Visualizations
-│   ├── components/          # UI sections
-│   ├── logic/               # Market summary features
-│   ├── services/            # Data access layer (Snowflake)
-│   ├── styles/              # Styling (CSS)
-│   └── streamlit_app.py     # Entry point
+├── app/                       # Streamlit application (serving layer)
+│   ├── charts/                # Visualizations
+│   ├── components/            # UI sections
+│   ├── logic/                 # Market summary features
+│   ├── services/              # Data access layer (Snowflake)
+│   ├── styles/                # Styling (CSS)
+│   └── streamlit_app.py       # Entry point
 │
-├── shared/                  # Shared utilities (Snowflake client)
+├── shared/                    # Shared utilities (Snowflake client)
 │
 └── README.md
 ```
