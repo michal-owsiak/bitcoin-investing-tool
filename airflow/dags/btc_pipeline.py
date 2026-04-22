@@ -1,5 +1,6 @@
 import os
 import subprocess
+import requests
 from airflow.sdk import dag, task 
 from datetime import datetime
 from pathlib import Path
@@ -15,8 +16,6 @@ from ingestion.load_binance_ohlc import run_ingestion
     catchup=False
 )
 def btc_pipeline():
-
-
     @task(
         retries=3,
         retry_delay=timedelta(minutes=2),
@@ -83,7 +82,21 @@ def btc_pipeline():
             )
 
 
-    run_snowflake_task() >> run_binance_ingestion() >> run_dbt()
+    @task(
+        retries=2,
+        retry_delay=timedelta(minutes=1)
+    )
+    def ping_streamlit():
+        url = 'https://bitcoin-investing-tool.streamlit.app/'
+        response = requests.get(url, timeout=30)
+
+        print(f'Ping status: {response.status_code}')
+
+        if response.status_code != 200:
+            raise Exception(f'Failed to ping Streamlit app: {response.status_code}')
+        
+
+    run_snowflake_task() >> run_binance_ingestion() >> run_dbt() >> ping_streamlit()
 
 
 btc_pipeline()
