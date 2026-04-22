@@ -126,9 +126,9 @@ bitcoin-investing-tool/
 │   │   ├── stg/             # Raw data cleaning and normalization
 │   │   ├── int/             # Reusable intermediate transformations
 │   │   └── marts/           # Final analytical data layer
-│   ├── macros/
-│   ├── seeds/
-│   └── tests/
+│   ├── macros/              # Reusable SQL logic
+│   ├── seeds/               # Static data loaded into warehouse
+│   └── tests/               # Data quality checks
 │
 ├── app/                     # Streamlit application (serving layer)
 │   ├── charts/              # Visualizations
