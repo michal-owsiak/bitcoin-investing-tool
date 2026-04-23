@@ -4,6 +4,8 @@ An end-to-end data engineering project and analytical application designed to su
 
 https://bitcoin-investing-tool.streamlit.app
 
+`Snowflake` · `dbt` · `Airflow` · `Docker` · `Streamlit`
+
 ------------------------------------------------------------------------
 
 ## **Architecture**
