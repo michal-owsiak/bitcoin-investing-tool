@@ -1,6 +1,6 @@
 ## **Bitcoin Investing Tool**
 
-A data engineering project with a production-ready analytical application for long-term Bitcoin investing.
+A data engineering project with a production-ready application that supports long-term Bitcoin investing analysis.
 
 https://bitcoin-investing-tool.com
 
