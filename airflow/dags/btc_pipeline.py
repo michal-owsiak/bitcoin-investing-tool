@@ -1,6 +1,5 @@
 import os
 import subprocess
-import requests
 from airflow.sdk import dag, task 
 from datetime import datetime
 from pathlib import Path
@@ -107,30 +106,15 @@ def btc_pipeline():
             raise Exception(
                 f'DBT TEST FAILED:\nreturn code={result.returncode}\nstdout={result.stdout}\nstderr={result.stderr}'
             )
-
-
-    @task(
-        retries=2,
-        retry_delay=timedelta(minutes=1)
-    )
-    def ping_streamlit():
-        url = 'https://bitcoin-investing-tool.streamlit.app/'
-        response = requests.get(url, timeout=30)
-
-        print(f'Ping status: {response.status_code}')
-
-        if response.status_code != 200:
-            raise Exception(f'Failed to ping Streamlit app: {response.status_code}')
         
 
     blockchain_ingestion = run_snowflake_task()
     binance_ingestion = run_binance_ingestion()
     dbt_run_task = dbt_run()
     dbt_test_task = dbt_test()
-    streamlit = ping_streamlit()
 
 
-    blockchain_ingestion >> binance_ingestion >> dbt_run_task >> dbt_test_task >> streamlit
+    blockchain_ingestion >> binance_ingestion >> dbt_run_task >> dbt_test_task
 
 
 btc_pipeline()
