@@ -91,11 +91,6 @@ This design ensures that the data pipeline directly supports the analytical goal
     > numpy
     > plotly
     > snowflake-connector-python
-
-**Monitoring (not included in the architecture graph):**
-
-    > Prometheus
-    > Grafana
     
 
 ## **Getting Started**
