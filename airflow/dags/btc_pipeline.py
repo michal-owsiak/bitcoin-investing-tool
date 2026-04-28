@@ -10,7 +10,7 @@ from ingestion.load_binance_ohlc import run_ingestion
 
 @dag(
     dag_id='btc_pipeline',
-    schedule='0 */4 * * *',
+    schedule='15 0 * * *',
     start_date=datetime(2026, 4, 1),
     catchup=False
 )
