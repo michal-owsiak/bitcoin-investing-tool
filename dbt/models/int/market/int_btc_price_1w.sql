@@ -4,18 +4,15 @@
     )
 }}
 
-with daily as (
 
+with daily as (
     select
         *,
         date_trunc('week', open_time) as week_start
-    from 
-        {{ ref('stg_binance_btcusdt_1d') }}
-
+    from {{ ref('stg_binance_btcusdt_1d') }}
 ),
 
 ranked as (
-
     select
         *,
         row_number() over (
@@ -23,11 +20,9 @@ ranked as (
             order by open_time asc
         ) as day_of_the_week
     from daily
-
 ),
 
 weekly_base as (
-
     select
         symbol,
         week_start,
@@ -38,29 +33,24 @@ weekly_base as (
         max(ingested_at) as ingested_at
     from ranked
     group by symbol, week_start
-
 ),
 
 weekly_open as (
-
     select
         symbol,
         week_start,
         open
     from ranked
     where day_of_the_week = 1
-
 ),
 
 weekly_close as (
-
     select
         symbol,
         week_start,
         close
     from ranked
     where day_of_the_week = 7
-
 )
 
 select

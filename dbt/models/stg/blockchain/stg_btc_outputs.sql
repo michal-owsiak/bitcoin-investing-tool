@@ -5,8 +5,8 @@
     )
 }}
 
-with flattened_outputs as (
 
+with flattened_outputs as (
     select
         stg.hash_key,
         stg.block_number,

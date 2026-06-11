@@ -1,7 +1,6 @@
 {% macro build_supertrend(source_relation, interval_label, atr_period=10, multiplier=3) %}
 
     with base as (
-
         select
             symbol,
             '{{ interval_label }}' as interval,
@@ -20,11 +19,9 @@
             ) as prev_close
         from 
             {{ source_relation }}
-
     ),
 
     tr_calc as (
-
         select
             *,
             greatest(
@@ -33,11 +30,9 @@
                 abs(low - prev_close)
             ) as tr
         from base
-
     ),
 
     atr_calc as (
-
         select
             *,
             avg(tr) over (
@@ -47,11 +42,9 @@
             ) as atr,
             (high + low) / 2 as hl2
         from tr_calc
-
     ),
 
     bands as (
-
         select
             *,
             hl2 + ({{ multiplier }} * atr) as basic_upper_band,
@@ -62,11 +55,9 @@
             ) as rn
         from atr_calc
         where atr is not null
-
     ),
 
     recursive_st as (
-
         select
             symbol,
             interval,
