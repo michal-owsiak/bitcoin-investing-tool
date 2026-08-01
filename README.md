@@ -1,12 +1,16 @@
 ## **Bitcoin Investing Tool**
 
-An end-to-end data engineering project and analytical application designed to support long-term Bitcoin investing.
+A data engineering project with a production-ready application that supports long-term Bitcoin investing analysis.
+
+https://bitcoin-investing-tool.com
+
+`Snowflake` · `dbt` · `Airflow` · `Docker` · `Streamlit`
 
 ------------------------------------------------------------------------
 
 ## **Architecture**
 
-![Architecture](https://i.postimg.cc/MZFm3CJg/Group-12.jpg)
+![Architecture](./architecture.jpg)
 
 ------------------------------------------------------------------------
 
@@ -30,11 +34,11 @@ reloads.
 ------------------------------------------------------------------------
 ## **Application**
 
-![Application](https://i.postimg.cc/BQxcZNVN/screenshot.jpg)
+![Application](./app_screenshot.jpg)
 
 ### **Key Components**
 
-- **Bitcoin Price Chart (Weekly Interval)**
+- **Bitcoin Price Chart (Weekly and Daily Timeframes)**
   - Main analytical view focused on long-term trends
   - Weekly granularity is used to reduce noise and support strategic decision-making
   - Daily interval is available for deeper analysis when needed
@@ -58,7 +62,7 @@ reloads.
 The application is optimized for long-term investing:
 
 - Focus on higher timeframes (weekly data)
-- Limited need for high-frequency ingestion (daily batches)
+- Limited need for high-frequency ingestion (daily batches are sufficient)
 - Separation of data sources:
   - market data (daily)
   - blockchain data (hourly)
@@ -87,11 +91,6 @@ This design ensures that the data pipeline directly supports the analytical goal
     > numpy
     > plotly
     > snowflake-connector-python
-
-**Monitoring:**
-
-    > Prometheus
-    > Grafana
     
 
 ## **Getting Started**
@@ -103,5 +102,49 @@ cd bitcoin-investing-tool
 cp .env.example .env
 
 docker compose up --build
+```
+
+## **Project Structure**
+
+Below is a simplified overview of the project structure to help navigate the codebase:
+
+``` bash
+bitcoin-investing-tool/
+│
+├── airflow/                   # Workflow orchestration (Apache Airflow)
+│   ├── dags/                  # DAG definitions
+│   ├── Dockerfile             # Airflow container setup
+│   └── docker-compose.yml     # Local orchestration environment
+│
+├── ingestion/                 # Market data ingestion (Binance API)
+│   ├── binance_client.py        # API client for fetching market data from Binance
+│   ├── snowflake_service.py     # Handles watermark retrieval and data loading into Snowflake
+│   └── load_binance_ohlc.py     # Orchestrates OHLC ingestion using Binance client and Snowflake service
+│
+├── dbt/                       # Data transformation layer (ELT)
+│   ├── models/
+│   │   ├── stg/                   # Raw data cleaning and normalization
+│   │   │   ├── blockchain/          # On-chain data transformations
+│   │   │   └── market/              # Market data (Binance) transformations
+│   │   ├── int/                   # Reusable intermediate transformations
+│   │   │   └── market/
+│   │   └── marts/                 # Final analytical data layer
+│   │       ├── blockchain/
+│   │       └── market/
+│   ├── macros/                  # Reusable SQL logic
+│   ├── seeds/                   # Static data loaded into warehouse
+│   └── tests/                   # Data quality checks
+│
+├── app/                       # Streamlit application (serving layer)
+│   ├── charts/                  # Visualizations
+│   ├── components/              # UI sections
+│   ├── logic/                   # Market summary features
+│   ├── services/                # Data access layer (Snowflake)
+│   ├── styles/                  # Styling (CSS)
+│   └── streamlit_app.py         # Entry point
+│
+├── shared/                    # Shared utilities (Snowflake client)
+│
+└── README.md
 ```
 

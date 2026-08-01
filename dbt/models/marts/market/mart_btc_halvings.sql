@@ -5,12 +5,10 @@
 }}
 
 with min_historical_data as (
-
     select 
         min(open_time) as min_open_time
     from 
         {{ ref('mart_btc_price_supertrend_1d') }}
-
 )
 
 select

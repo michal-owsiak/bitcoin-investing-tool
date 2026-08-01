@@ -34,12 +34,13 @@ services:
       - ../ingestion:/opt/airflow/ingestion
       - ../dbt:/opt/airflow/dbt
       - ../keys:/opt/airflow/keys
-      - ./logs:/opt/airflow/logs
+      - ./airflow_logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
       - ~/.dbt:/home/airflow/.dbt
     command: ["bash", "-c", "airflow db migrate"]
 
   airflow-webserver:
+    hostname: airflow-webserver
     build: .
     restart: always
     depends_on:
@@ -63,7 +64,7 @@ services:
       - ../ingestion:/opt/airflow/ingestion
       - ../dbt:/opt/airflow/dbt
       - ../keys:/opt/airflow/keys
-      - ./logs:/opt/airflow/logs
+      - ./airflow_logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
       - ~/.dbt:/home/airflow/.dbt
     ports:
@@ -71,6 +72,7 @@ services:
     command: api-server
 
   airflow-scheduler:
+    hostname: airflow-scheduler
     build: .
     restart: always
     depends_on:
@@ -94,12 +96,13 @@ services:
       - ../ingestion:/opt/airflow/ingestion
       - ../dbt:/opt/airflow/dbt
       - ../keys:/opt/airflow/keys
-      - ./logs:/opt/airflow/logs
+      - ./airflow_logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
       - ~/.dbt:/home/airflow/.dbt
     command: scheduler
 
   airflow-dag-processor:
+    hostname: airflow-dag-processor
     build: .
     restart: always
     depends_on:
@@ -123,7 +126,7 @@ services:
       - ../ingestion:/opt/airflow/ingestion
       - ../dbt:/opt/airflow/dbt
       - ../keys:/opt/airflow/keys
-      - ./logs:/opt/airflow/logs
+      - ./airflow_logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
       - ~/.dbt:/home/airflow/.dbt
     command: dag-processor

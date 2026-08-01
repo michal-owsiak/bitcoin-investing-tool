@@ -10,13 +10,11 @@ from ingestion.load_binance_ohlc import run_ingestion
 
 @dag(
     dag_id='btc_pipeline',
-    schedule='0 */4 * * *',
+    schedule='15 0 * * *',
     start_date=datetime(2026, 4, 1),
     catchup=False
 )
 def btc_pipeline():
-
-
     @task(
         retries=3,
         retry_delay=timedelta(minutes=2),
@@ -61,27 +59,7 @@ def btc_pipeline():
         retry_delay=timedelta(minutes=2),
         retry_exponential_backoff=True,
     )
-    def run_dbt():
-        deps = subprocess.run(
-            [
-                '/home/airflow/.local/bin/dbt',
-                'deps',
-                '--project-dir', str(DBT_DIR),
-                '--profiles-dir', str(DBT_DIR),
-            ],
-            cwd=str(DBT_DIR),
-            capture_output=True,
-            text=True,
-        )
-
-        print(f'DBT DEPS RETURN CODE: {deps.returncode}')
-        print(deps.stdout)
-
-        if deps.returncode != 0:
-            raise Exception(
-                f'DBT DEPS FAILED:\nreturn code={deps.returncode}\nstdout={deps.stdout}\nstderr={deps.stderr}'
-            )
-
+    def dbt_run():
         result = subprocess.run(
             [
                 '/home/airflow/.local/bin/dbt',
@@ -99,11 +77,44 @@ def btc_pipeline():
 
         if result.returncode != 0:
             raise Exception(
-                f'DBT FAILED:\nreturn code={result.returncode}\nstdout={result.stdout}\nstderr={result.stderr}'
+                f'DBT RUN FAILED:\nreturn code={result.returncode}\nstdout={result.stdout}\nstderr={result.stderr}'
             )
+        
+    
+    @task(
+        retries=3,
+        retry_delay=timedelta(minutes=2),
+        retry_exponential_backoff=True,
+    )
+    def dbt_test():
+        result = subprocess.run(
+            [
+                '/home/airflow/.local/bin/dbt',
+                'test',
+                '--project-dir', str(DBT_DIR),
+                '--profiles-dir', str(DBT_DIR),
+            ],
+            cwd=str(DBT_DIR),
+            capture_output=True,
+            text=True,
+        )
+
+        print(f'DBT TEST RETURN CODE: {result.returncode}')
+        print(result.stdout)
+
+        if result.returncode != 0:
+            raise Exception(
+                f'DBT TEST FAILED:\nreturn code={result.returncode}\nstdout={result.stdout}\nstderr={result.stderr}'
+            )
+        
+
+    blockchain_ingestion = run_snowflake_task()
+    binance_ingestion = run_binance_ingestion()
+    dbt_run_task = dbt_run()
+    dbt_test_task = dbt_test()
 
 
-    run_snowflake_task() >> run_binance_ingestion() >> run_dbt()
+    blockchain_ingestion >> binance_ingestion >> dbt_run_task >> dbt_test_task
 
 
 btc_pipeline()

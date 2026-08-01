@@ -93,6 +93,6 @@ def get_connection():
         private_key=_get_private_key_bytes(),
         warehouse=get_secret("SNOWFLAKE_WAREHOUSE"),
         database=get_secret("SNOWFLAKE_DATABASE"),
-        schema=get_secret("SNOWFLAKE_DBT_SCHEMA"),
+        schema=get_secret("SNOWFLAKE_PROD_SCHEMA"),
         role=get_secret("SNOWFLAKE_ROLE", None),
     )

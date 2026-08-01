@@ -38,10 +38,6 @@ jobs:
         working-directory: ./dbt
         run: dbt deps
 
-      - name: Run dbt debug
+      - name: Run dbt build
         working-directory: ./dbt
-        run: dbt debug
-
-      - name: Run dbt
-        working-directory: ./dbt
-        run: dbt run
+        run: dbt build

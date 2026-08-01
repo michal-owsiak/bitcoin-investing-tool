@@ -11,7 +11,7 @@ def read_price_supertrend(interval: str = '1w', limit: int = 3500) -> pd.DataFra
     query = f'''
         select *
         from 
-            {os.environ['SNOWFLAKE_DATABASE']}.{os.environ['SNOWFLAKE_DBT_SCHEMA']}.MART_BTC_PRICE_SUPERTREND_{interval.upper()}
+            {os.environ['SNOWFLAKE_DATABASE']}.{os.environ['SNOWFLAKE_PROD_SCHEMA']}.MART_BTC_PRICE_SUPERTREND_{interval.upper()}
         order by 
             open_time desc
         limit {limit}
@@ -33,7 +33,7 @@ def read_halvings() -> pd.DataFrame:
     query = f'''
         select *
         from 
-            {os.environ['SNOWFLAKE_DATABASE']}.{os.environ['SNOWFLAKE_DBT_SCHEMA']}.MART_BTC_HALVINGS
+            {os.environ['SNOWFLAKE_DATABASE']}.{os.environ['SNOWFLAKE_PROD_SCHEMA']}.MART_BTC_HALVINGS
         order by 
             halving_date
     '''
@@ -54,7 +54,7 @@ def read_whale_inflow() -> pd.DataFrame:
             total_output_value,
             transaction_count
         from 
-            {os.environ['SNOWFLAKE_DATABASE']}.{os.environ['SNOWFLAKE_DBT_SCHEMA']}.MART_BTC_WHALE_ALERT_V2
+            {os.environ['SNOWFLAKE_DATABASE']}.{os.environ['SNOWFLAKE_PROD_SCHEMA']}.MART_BTC_WHALE_ALERT_V2
         order by 
             total_output_value desc
     '''

@@ -2,3 +2,8 @@ requests>=2.31,<3
 pandas>=2.0,<3
 snowflake-connector-python[pandas]>=3.12,<4
 python-dotenv>=1.0,<2
+pyOpenSSL>=24,<25
+streamlit==1.40.0
+plotly==6.6.0
+dbt-core==1.9.4
+dbt-snowflake==1.9.4
