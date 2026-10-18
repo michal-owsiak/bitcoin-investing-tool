@@ -30,13 +30,17 @@ with chart_col:
 
 
 class BacktestUITests(unittest.TestCase):
-    def app(self):
+    def app(self, latest_entry=True):
         app = AppTest.from_string(APP).run()
         self.assertFalse(app.exception)
+        if latest_entry:
+            app.selectbox(key='backtest_entry_1W').select_index(0).run()
+            self.assertFalse(app.exception)
         return app
 
     def test_amount_and_entry_update_hold_result(self):
         app = self.app()
+        app.selectbox(key='backtest_strategy').select('Hold until today').run()
         self.assertEqual(app.metric[0].value, '1,500.00')
         app.text_input[0].set_value('2000').run()
         self.assertEqual(app.text_input[0].value, '2,000.00')
@@ -44,6 +48,28 @@ class BacktestUITests(unittest.TestCase):
         app.selectbox(key='backtest_entry_1W').select_index(1).run()
         self.assertFalse(app.exception)
         self.assertEqual(app.metric[0].value, '3,600.00')
+
+    def test_strategy_order_and_follow_all_signals_default(self):
+        app = self.app(latest_entry=False)
+        strategy = app.selectbox(key='backtest_strategy')
+        self.assertEqual(strategy.options, [
+            'Follow all signals', 'Hold until today', 'Exit on next bearish flip',
+        ])
+        self.assertEqual(strategy.value, 'Follow all signals')
+        self.assertEqual(app.selectbox(key='backtest_entry_1W').value, '2024-01-02T00:00:00+00:00')
+        self.assertFalse(app.exception)
+        self.assertEqual(app.metric[0].value, '2,250.00')
+
+    def test_changing_strategy_preserves_selected_entry_date(self):
+        app = self.app(latest_entry=False)
+        for entry_index in [1, 0]:
+            app.selectbox(key='backtest_entry_1W').select_index(entry_index).run()
+            entry_date = app.selectbox(key='backtest_entry_1W').value
+            for strategy in ['Hold until today', 'Exit on next bearish flip', 'Follow all signals']:
+                with self.subTest(entry_index=entry_index, strategy=strategy):
+                    app.selectbox(key='backtest_strategy').select(strategy).run()
+                    self.assertFalse(app.exception)
+                    self.assertEqual(app.selectbox(key='backtest_entry_1W').value, entry_date)
 
     def test_investment_accepts_and_formats_grouped_amounts(self):
         app = self.app()
@@ -125,6 +151,7 @@ class BacktestUITests(unittest.TestCase):
 
     def test_table_formats_negative_returns(self):
         app = AppTest.from_string(APP.replace('120., 180.', '120., 60.')).run()
+        app.selectbox(key='backtest_entry_1W').select_index(0).run()
         self.assertFalse(app.exception)
         displayed = pyarrow.ipc.open_stream(app.dataframe[0].proto.styler.display_values).read_pandas()
         self.assertEqual(displayed.iloc[0]['Trade return (%)'], '-50.00%')
@@ -242,6 +269,7 @@ render_market_summary({
                 app = AppTest.from_string(APP.replace(
                     '120., 180.', f'120., {latest_price}.',
                 )).run()
+                app.selectbox(key='backtest_entry_1W').select_index(0).run()
                 self.assertFalse(app.exception)
                 results = [item.value for item in app.markdown if f'color:{color};' in item.value]
                 self.assertEqual(len(results), 2)

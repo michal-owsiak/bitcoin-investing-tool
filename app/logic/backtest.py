@@ -4,9 +4,9 @@ import pandas as pd
 
 
 STRATEGIES = (
+    'Follow all signals',
     'Hold until today',
     'Exit on next bearish flip',
-    'Follow all signals',
 )
 
 
