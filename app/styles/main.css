@@ -68,6 +68,64 @@ section[data-testid='stSidebar'] div[role='radiogroup'] label p {
     font-weight: 600;
 }
 
+.st-key-market_summary h3 {
+    font-size: 16.15px !important;
+}
+
+.st-key-backtest_trade_details [data-testid="stElementToolbarButton"]:has(button[aria-label="Search"]) {
+    display: none;
+}
+
+.st-key-backtest_investment_control {
+    position: relative;
+    gap: 0;
+}
+
+.st-key-backtest_investment_control input {
+    padding-right: 88px !important;
+}
+
+.st-key-backtest_investment_decrease,
+.st-key-backtest_investment_increase {
+    position: absolute;
+    bottom: 0;
+    width: 40px;
+    height: 40px;
+    z-index: 1;
+}
+
+.st-key-backtest_investment_decrease {
+    right: 40px;
+}
+
+.st-key-backtest_investment_increase {
+    right: 0;
+}
+
+.st-key-backtest_decrease,
+.st-key-backtest_increase,
+.st-key-backtest_decrease [data-testid="stButton"],
+.st-key-backtest_increase [data-testid="stButton"] {
+    width: 40px !important;
+    max-width: 40px;
+}
+
+.st-key-backtest_investment_decrease button,
+.st-key-backtest_investment_increase button {
+    width: 40px;
+    min-width: 0;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.st-key-backtest_investment_decrease button:hover,
+.st-key-backtest_investment_increase button:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
 .footer {
     position: fixed;
     bottom: 8px;
