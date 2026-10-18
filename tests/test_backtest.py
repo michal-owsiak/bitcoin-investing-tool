@@ -15,7 +15,7 @@ class BacktestTests(unittest.TestCase):
             'SIGNAL_FLIP_DOWN': [False, True, False, True, False, False],
         })
 
-    def calculate(self, strategy, entry_date='2024-01-01', data=None):
+    def calculate(self, strategy, entry_date='2024-01-02', data=None):
         return calculate_backtest(
             self.data if data is None else data, entry_date, 1000, strategy
         )
@@ -26,6 +26,8 @@ class BacktestTests(unittest.TestCase):
         self.assertEqual(result['profit'], 1500)
         self.assertEqual(result['return_pct'], 150)
         self.assertEqual(result['closed_trades'], 0)
+        self.assertEqual(result['trades'][0]['trade_return_pct'], 150)
+        self.assertEqual(result['trades'][0]['cumulative_return_pct'], result['return_pct'])
         self.assertTrue(result['position_open'])
 
     def test_exit_uses_first_subsequent_bearish_flip(self):
@@ -34,10 +36,15 @@ class BacktestTests(unittest.TestCase):
         self.assertEqual(result['closed_trades'], 1)
         self.assertEqual(result['execution_count'], 2)
         self.assertEqual(result['trades'][0]['exit_price'], 150)
+        self.assertEqual(result['trades'][0]['trade_return_pct'], 50)
+        self.assertEqual(result['trades'][0]['cumulative_return_pct'], 50)
+        self.assertEqual(result['entry_date'], pd.Timestamp('2024-01-02', tz='UTC'))
+        self.assertEqual(result['trades'][0]['entry_date'], result['entry_date'])
+        self.assertEqual(result['trades'][0]['exit_date'], pd.Timestamp('2024-01-03', tz='UTC'))
         self.assertFalse(result['position_open'])
 
     def test_exit_without_bearish_marks_open_position(self):
-        result = self.calculate('Exit on next bearish flip', '2024-01-05')
+        result = self.calculate('Exit on next bearish flip', '2024-01-06')
         self.assertTrue(result['awaiting_exit'])
         self.assertEqual(result['final_value'], 1250)
         self.assertIsNone(result['trades'][0]['exit_date'])
@@ -48,6 +55,13 @@ class BacktestTests(unittest.TestCase):
         self.assertEqual(result['closed_trades'], 2)
         self.assertEqual(result['execution_count'], 5)
         self.assertEqual([trade['value'] for trade in result['trades']], [1500, 3000, 3750])
+        self.assertEqual([trade['trade_return_pct'] for trade in result['trades']], [50, 100, 25])
+        self.assertEqual([trade['cumulative_return_pct'] for trade in result['trades']], [50, 200, 275])
+        self.assertEqual(result['trades'][-1]['cumulative_return_pct'], result['return_pct'])
+        self.assertEqual(
+            [trade['entry_date'] for trade in result['trades']],
+            pd.to_datetime(['2024-01-02', '2024-01-04', '2024-01-06'], utc=True).tolist(),
+        )
 
     def test_follow_ends_in_cash_without_using_later_prices(self):
         data = self.data.copy()
@@ -56,8 +70,16 @@ class BacktestTests(unittest.TestCase):
         self.assertEqual(result['final_value'], 3000)
         self.assertFalse(result['position_open'])
 
+    def test_trade_and_cumulative_returns_include_losses_and_reinvestment(self):
+        data = self.data.copy()
+        data['CLOSE'] = [100., 50., 100., 200., 200., 100.]
+        result = self.calculate('Follow all signals', data=data)
+        self.assertEqual([trade['trade_return_pct'] for trade in result['trades']], [-50, 100, -50])
+        self.assertEqual([trade['cumulative_return_pct'] for trade in result['trades']], [-50, 0, -50])
+        self.assertEqual(result['trades'][-1]['cumulative_return_pct'], result['return_pct'])
+
     def test_only_selected_entry_and_later_signals_are_used(self):
-        result = self.calculate('Follow all signals', '2024-01-03')
+        result = self.calculate('Follow all signals', '2024-01-04')
         self.assertAlmostEqual(result['final_value'], 2500)
         self.assertEqual(result['closed_trades'], 1)
 
@@ -77,11 +99,13 @@ class BacktestTests(unittest.TestCase):
     def test_invalid_investment_strategy_and_entry(self):
         for amount in [0, -1, float('nan'), float('inf')]:
             with self.subTest(amount=amount), self.assertRaises(ValueError):
-                calculate_backtest(self.data, '2024-01-01', amount, 'Hold until today')
+                calculate_backtest(self.data, '2024-01-02', amount, 'Hold until today')
         with self.assertRaises(ValueError):
             self.calculate('Unknown')
         with self.assertRaises(ValueError):
-            self.calculate('Hold until today', '2024-01-02')
+            self.calculate('Hold until today', '2024-01-03')
+        with self.assertRaises(ValueError):
+            self.calculate('Hold until today', '2024-01-01')
 
     def test_invalid_data_is_rejected(self):
         for price in [0, -1, None, float('inf')]:
@@ -101,7 +125,7 @@ class BacktestTests(unittest.TestCase):
             prepare_backtest_data(data)
 
     def test_single_latest_bullish_candle(self):
-        result = self.calculate('Follow all signals', '2024-01-05', self.data.iloc[4:5])
+        result = self.calculate('Follow all signals', '2024-01-06', self.data.iloc[4:5])
         self.assertEqual(result['final_value'], 1000)
         self.assertEqual(result['return_pct'], 0)
 

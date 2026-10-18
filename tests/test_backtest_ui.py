@@ -1,7 +1,7 @@
-import json
 from pathlib import Path
 import unittest
 
+import pyarrow.ipc
 from streamlit.testing.v1 import AppTest
 
 
@@ -105,8 +105,31 @@ class BacktestUITests(unittest.TestCase):
 
     def test_portfolio_table_formats_two_decimal_places(self):
         app = self.app()
-        columns = json.loads(app.dataframe[0].proto.columns)
-        self.assertEqual(columns['Portfolio value (USDT)']['type_config']['format'], '%.2f')
+        displayed = pyarrow.ipc.open_stream(app.dataframe[0].proto.styler.display_values).read_pandas()
+        self.assertEqual(displayed.iloc[0]['Portfolio value (USDT)'], '1,500.00')
+        self.assertEqual(displayed.iloc[0]['Entry price (USDT)'], '120.00')
+        self.assertEqual(displayed.iloc[0]['Exit date'], '-')
+        self.assertEqual(displayed.iloc[0]['Exit price (USDT)'], '-')
+        self.assertIn('color: #999999', app.dataframe[0].proto.styler.styles)
+
+    def test_table_shows_trade_and_compounded_returns(self):
+        app = self.app()
+        app.selectbox(key='backtest_entry_1W').select_index(1).run()
+        app.selectbox(key='backtest_strategy').select('Follow all signals').run()
+        self.assertFalse(app.exception)
+        displayed = pyarrow.ipc.open_stream(app.dataframe[0].proto.styler.display_values).read_pandas()
+        self.assertEqual(displayed['Trade return (%)'].tolist(), ['+50.00%', '+50.00%'])
+        self.assertEqual(displayed['Cumulative return (%)'].tolist(), ['+50.00%', '+125.00%'])
+        self.assertEqual(app.dataframe[0].value['Status'].tolist(), ['Closed', 'Open'])
+        self.assertIn('color: #23a88e', app.dataframe[0].proto.styler.styles)
+
+    def test_table_formats_negative_returns(self):
+        app = AppTest.from_string(APP.replace('120., 180.', '120., 60.')).run()
+        self.assertFalse(app.exception)
+        displayed = pyarrow.ipc.open_stream(app.dataframe[0].proto.styler.display_values).read_pandas()
+        self.assertEqual(displayed.iloc[0]['Trade return (%)'], '-50.00%')
+        self.assertEqual(displayed.iloc[0]['Cumulative return (%)'], '-50.00%')
+        self.assertIn('color: #f14c4a', app.dataframe[0].proto.styler.styles)
 
     def test_market_summary_only_shrinks_headings_and_colored_values(self):
         app = AppTest.from_string(APP + '''
@@ -146,12 +169,28 @@ render_market_summary({
         app.selectbox(key='backtest_entry_1W').select_index(1).run()
         app.selectbox(key='backtest_strategy').select('Exit on next bearish flip').run()
         self.assertEqual(app.metric[0].value, '1,500.00')
-        self.assertTrue(any('Exit candle: 2024-01-02' in item.value for item in app.caption))
+        self.assertTrue(any('Exit date: 2024-01-03' in item.value for item in app.caption))
         app.selectbox(key='backtest_strategy').select('Follow all signals').run()
         self.assertFalse(app.exception)
         self.assertEqual(app.metric[0].value, '2,250.00')
         self.assertEqual(len(app.dataframe[0].value), 2)
         self.assertTrue(app.expander[0].proto.expanded)
+
+    def test_entry_and_exit_dates_use_exact_candle_closes(self):
+        app = AppTest.from_string(APP.replace(
+            'pd.date_range(\'2024-01-02\', periods=4)',
+            "pd.date_range('2024-01-01 23:59:59.999', periods=4)",
+        )).run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.selectbox(key='backtest_entry_1W').label, 'Bullish flip date')
+        self.assertEqual(app.selectbox(key='backtest_entry_1W').options, ['2024-01-03', '2024-01-01'])
+        app.selectbox(key='backtest_entry_1W').select_index(1).run()
+        app.selectbox(key='backtest_strategy').select('Exit on next bearish flip').run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.metric[0].value, '1,500.00')
+        trade = app.dataframe[0].value.iloc[0]
+        self.assertEqual(trade['Entry date'], '2024-01-01')
+        self.assertEqual(trade['Exit date'], '2024-01-02')
 
     def test_trade_details_are_expanded_for_every_strategy(self):
         for strategy in ['Hold until today', 'Exit on next bearish flip', 'Follow all signals']:
@@ -168,6 +207,20 @@ render_market_summary({
                 self.assertTrue(app.expander[0].proto.expanded)
                 expected_status = 'Open' if strategy == 'Hold until today' else 'Closed'
                 self.assertEqual(app.dataframe[0].value.iloc[0]['Status'], expected_status)
+
+    def test_strategy_prefix_and_compact_investment_details(self):
+        app = self.app()
+        app.selectbox(key='backtest_entry_1W').select_index(1).run()
+        for strategy in ['Hold until today', 'Exit on next bearish flip', 'Follow all signals']:
+            with self.subTest(strategy=strategy):
+                app.selectbox(key='backtest_strategy').select(strategy).run()
+                self.assertFalse(app.exception)
+                self.assertTrue(any(item.value.startswith('Strategy: ') for item in app.caption))
+                details = [item.value for item in app.caption if item.value.startswith('Invested:')]
+                self.assertEqual(len(details), 1)
+                expected = 'Exit date:' if strategy == 'Exit on next bearish flip' else 'Latest close:'
+                self.assertIn('  \n' + expected, details[0])
+                self.assertNotIn('\n\n', details[0])
 
     def test_profit_and_return_use_market_status_colors(self):
         for latest_price, color, profit, return_pct in [

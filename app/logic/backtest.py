@@ -27,7 +27,7 @@ def prepare_backtest_data(price_df):
         raise ValueError('Backtest data contains missing or invalid dates or prices.')
     if not df['CLOSE'].map(math.isfinite).all() or (df['CLOSE'] <= 0).any():
         raise ValueError('Backtest prices must be finite and greater than zero.')
-    if df['OPEN_TIME'].duplicated().any():
+    if df['OPEN_TIME'].duplicated().any() or df['CLOSE_TIME'].duplicated().any():
         raise ValueError('Backtest data contains duplicate candles.')
 
     for column in ['SIGNAL_FLIP_UP', 'SIGNAL_FLIP_DOWN']:
@@ -37,7 +37,7 @@ def prepare_backtest_data(price_df):
     if (df['SIGNAL_FLIP_UP'] & df['SIGNAL_FLIP_DOWN']).any():
         raise ValueError('A candle cannot contain both a bullish and bearish flip.')
 
-    return df.sort_values('OPEN_TIME').reset_index(drop=True)
+    return df.sort_values('CLOSE_TIME').reset_index(drop=True)
 
 
 def calculate_backtest(price_df, entry_date, investment, strategy):
@@ -48,13 +48,13 @@ def calculate_backtest(price_df, entry_date, investment, strategy):
 
     df = prepare_backtest_data(price_df)
     entry_date = pd.to_datetime(entry_date, utc=True)
-    entries = df[(df['OPEN_TIME'] == entry_date) & df['SIGNAL_FLIP_UP']]
+    entries = df[(df['CLOSE_TIME'] == entry_date) & df['SIGNAL_FLIP_UP']]
     if entries.empty:
         raise ValueError('Select an available bullish flip.')
 
     entry = entries.iloc[0]
     latest = df.iloc[-1]
-    subsequent = df[df['OPEN_TIME'] > entry_date]
+    subsequent = df[df['CLOSE_TIME'] > entry_date]
     cash = float(investment)
     btc = cash / float(entry['CLOSE'])
     cash = 0.0
@@ -71,11 +71,13 @@ def calculate_backtest(price_df, entry_date, investment, strategy):
         if btc > 0 and candle['SIGNAL_FLIP_DOWN']:
             cash = btc * float(candle['CLOSE'])
             trades.append({
-                'entry_date': current_entry['OPEN_TIME'],
+                'entry_date': current_entry['CLOSE_TIME'],
                 'entry_price': float(current_entry['CLOSE']),
-                'exit_date': candle['OPEN_TIME'],
+                'exit_date': candle['CLOSE_TIME'],
                 'exit_price': float(candle['CLOSE']),
                 'value': cash,
+                'trade_return_pct': (float(candle['CLOSE']) / float(current_entry['CLOSE']) - 1) * 100,
+                'cumulative_return_pct': (cash / investment - 1) * 100,
                 'status': 'Closed',
             })
             btc = 0.0
@@ -91,17 +93,19 @@ def calculate_backtest(price_df, entry_date, investment, strategy):
         raise ValueError('The calculated portfolio value is too large.')
     if btc > 0:
         trades.append({
-            'entry_date': current_entry['OPEN_TIME'],
+            'entry_date': current_entry['CLOSE_TIME'],
             'entry_price': float(current_entry['CLOSE']),
             'exit_date': None,
             'exit_price': None,
             'value': final_value,
+            'trade_return_pct': (float(latest['CLOSE']) / float(current_entry['CLOSE']) - 1) * 100,
+            'cumulative_return_pct': (final_value / investment - 1) * 100,
             'status': 'Open',
         })
 
     return {
         'investment': float(investment),
-        'entry_date': entry['OPEN_TIME'],
+        'entry_date': entry['CLOSE_TIME'],
         'entry_price': float(entry['CLOSE']),
         'latest_date': latest['CLOSE_TIME'],
         'latest_price': float(latest['CLOSE']),
