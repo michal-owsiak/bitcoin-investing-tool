@@ -68,7 +68,7 @@ services:
       - ./plugins:/opt/airflow/plugins
       - ~/.dbt:/home/airflow/.dbt
     ports:
-      - "8080:8080"
+      - "8082:8080"
     command: api-server
 
   airflow-scheduler:
@@ -131,47 +131,5 @@ services:
       - ~/.dbt:/home/airflow/.dbt
     command: dag-processor
 
-  prometheus:
-    image: prom/prometheus
-    container_name: prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    restart: unless-stopped
-
-  grafana:
-    image: grafana/grafana
-    container_name: grafana
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-    restart: unless-stopped
-    depends_on:
-      - prometheus
-      
-  node-exporter:
-    image: prom/node-exporter
-    container_name: node-exporter
-    ports:
-      - "9100:9100"
-    restart: unless-stopped
-
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
-    container_name: cadvisor
-    ports:
-      - "8081:8080"
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-    restart: unless-stopped
-
 volumes:
   postgres-db-volume:
-  prometheus_data:
-  grafana_data:
