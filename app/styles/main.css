@@ -72,6 +72,10 @@ section[data-testid='stSidebar'] div[role='radiogroup'] label p {
     font-size: 16.15px !important;
 }
 
+.st-key-backtest_trade_details [data-testid="stElementToolbarButton"]:has(button[aria-label="Search"]) {
+    display: none;
+}
+
 .st-key-backtest_investment_control {
     position: relative;
     gap: 0;
@@ -96,6 +100,14 @@ section[data-testid='stSidebar'] div[role='radiogroup'] label p {
 
 .st-key-backtest_investment_increase {
     right: 0;
+}
+
+.st-key-backtest_decrease,
+.st-key-backtest_increase,
+.st-key-backtest_decrease [data-testid="stButton"],
+.st-key-backtest_increase [data-testid="stButton"] {
+    width: 40px !important;
+    max-width: 40px;
 }
 
 .st-key-backtest_investment_decrease button,

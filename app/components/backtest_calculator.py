@@ -57,7 +57,7 @@ def render_backtest_calculator(price_df, timeframe):
         st.info('No bullish flips are available for this timeframe.')
         return
 
-    entry_col, amount_col, strategy_col = st.columns([1, 1, 1.4])
+    entry_col, amount_col, strategy_col = st.columns(3)
     with entry_col:
         entry_date = st.selectbox(
             'Bullish flip date',
@@ -118,28 +118,27 @@ def render_backtest_calculator(price_df, timeframe):
         )
 
     investment_details = (
-        f"Invested: {result['investment']:,.2f} USDT | "
-        f"Entry date: {result['entry_date']:%Y-%m-%d} | "
-        f"Entry price: {result['entry_price']:,.2f} USDT"
+        f"Invested: **{result['investment']:,.2f} USDT** | "
+        f"Entry: **{result['entry_date']:%Y-%m-%d}** "
+        f"at **{result['entry_price']:,.2f} USDT**"
     )
     if strategy == 'Exit on next bearish flip' and not result['position_open']:
         trade = result['trades'][0]
         valuation_details = (
-            f"Exit date: {trade['exit_date']:%Y-%m-%d} | "
-            f"Exit price: {trade['exit_price']:,.2f} USDT"
+            f"Exit: **{trade['exit_date']:%Y-%m-%d}** "
+            f"at **{trade['exit_price']:,.2f} USDT**"
         )
     else:
         valuation_details = (
-            f"Latest close: {result['latest_date']:%Y-%m-%d %H:%M} UTC | "
-            f"BTC price: {result['latest_price']:,.2f} USDT"
+            f"Latest close: **{result['latest_date']:%Y-%m-%d}** | "
+            f"BTC: **{result['latest_price']:,.2f} USDT**"
         )
     st.caption(f'{investment_details}  \n{valuation_details}')
 
     if strategy == 'Follow all signals':
-        position = 'BTC (open position)' if result['position_open'] else 'Cash (USDT)'
+        position = 'BTC (open)' if result['position_open'] else 'Cash (USDT)'
         st.caption(
-            f"Closed trades: {result['closed_trades']} | "
-            f"Buy / sell executions: {result['execution_count']} | Position: {position}"
+            f"Closed trades: **{result['closed_trades']}** | Position: **{position}**"
         )
 
     with st.expander('Trade details', expanded=True):

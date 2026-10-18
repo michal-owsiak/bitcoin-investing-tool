@@ -169,7 +169,7 @@ render_market_summary({
         app.selectbox(key='backtest_entry_1W').select_index(1).run()
         app.selectbox(key='backtest_strategy').select('Exit on next bearish flip').run()
         self.assertEqual(app.metric[0].value, '1,500.00')
-        self.assertTrue(any('Exit date: 2024-01-03' in item.value for item in app.caption))
+        self.assertTrue(any('Exit: **2024-01-03** at **150.00 USDT**' in item.value for item in app.caption))
         app.selectbox(key='backtest_strategy').select('Follow all signals').run()
         self.assertFalse(app.exception)
         self.assertEqual(app.metric[0].value, '2,250.00')
@@ -218,9 +218,19 @@ render_market_summary({
                 self.assertTrue(any(item.value.startswith('Strategy: ') for item in app.caption))
                 details = [item.value for item in app.caption if item.value.startswith('Invested:')]
                 self.assertEqual(len(details), 1)
-                expected = 'Exit date:' if strategy == 'Exit on next bearish flip' else 'Latest close:'
+                expected = 'Exit:' if strategy == 'Exit on next bearish flip' else 'Latest close:'
                 self.assertIn('  \n' + expected, details[0])
                 self.assertNotIn('\n\n', details[0])
+                self.assertIn('Invested: **1,000.00 USDT**', details[0])
+                self.assertIn('Entry: **2024-01-02** at **100.00 USDT**', details[0])
+                if strategy != 'Exit on next bearish flip':
+                    self.assertIn('Latest close: **2024-01-05** | BTC: **180.00 USDT**', details[0])
+                if strategy == 'Follow all signals':
+                    self.assertTrue(any(
+                        item.value == 'Closed trades: **1** | Position: **BTC (open)**'
+                        for item in app.caption
+                    ))
+                self.assertFalse(any('Buy / sell executions:' in item.value for item in app.caption))
 
     def test_profit_and_return_use_market_status_colors(self):
         for latest_price, color, profit, return_pct in [
