@@ -68,8 +68,10 @@ def render_backtest_calculator(price_df, timeframe):
         )
     with amount_col:
         with st.container(key='backtest_investment_control'):
+            if 'backtest_investment_text' not in st.session_state:
+                st.session_state['backtest_investment_text'] = '1,000.00'
             investment_text = st.text_input(
-                'Investment (USDT)', value='1,000.00',
+                'Investment (USDT)',
                 key='backtest_investment_text', on_change=format_investment_input,
             )
             try:

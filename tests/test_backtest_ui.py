@@ -1,5 +1,6 @@
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 import pyarrow.ipc
 from streamlit.testing.v1 import AppTest
@@ -85,6 +86,25 @@ class BacktestUITests(unittest.TestCase):
                 self.assertFalse(app.exception)
                 self.assertEqual(app.text_input[0].value, formatted)
                 self.assertEqual(app.metric[0].value, portfolio)
+
+    def test_existing_investment_state_does_not_show_duplicate_value_warning(self):
+        with patch('streamlit.elements.lib.policies._shown_default_value_warning', False):
+            app = AppTest.from_string(APP)
+            app.session_state['backtest_investment_text'] = '12,000.00'
+            app.run()
+            self.assertFalse(app.exception)
+            self.assertEqual(len(app.warning), 0)
+            self.assertEqual(app.text_input[0].value, '12,000.00')
+
+            app.text_input[0].set_value('15000').run()
+            self.assertFalse(app.exception)
+            self.assertEqual(len(app.warning), 0)
+            self.assertEqual(app.text_input[0].value, '15,000.00')
+
+            app.button(key='backtest_increase').click().run()
+            self.assertFalse(app.exception)
+            self.assertEqual(len(app.warning), 0)
+            self.assertEqual(app.text_input[0].value, '15,100.00')
 
     def test_invalid_investment_shows_warning_without_results(self):
         app = self.app()
