@@ -1,6 +1,6 @@
 ## **Bitcoin Investing Tool**
 
-A data engineering project with a production-ready application that supports long-term Bitcoin investing analysis.
+An end-to-end Bitcoin analytics project combining an incremental ELT pipeline with a deployed Streamlit application for long-term market analysis.
 
 https://bitcoin-investing-tool.com
 
@@ -46,7 +46,12 @@ reloads.
 - **Supertrend Indicator**
   - Primary analytical tool used in the application
   - Helps identify long-term trend direction and potential reversal points
-  - Has proven effective in capturing major market cycles
+  - Used to explore historical market cycles and simulate signal-based investment strategies
+
+- **Backtest Reward Calculator**
+  - Simulates an investment from a selected historical bullish flip on the chart's weekly or daily timeframe
+  - Compares three strategies using existing Supertrend signals, without recalculating the indicator
+  - Shows portfolio value, profit/loss, percentage return, and individual trade details
 
 - **Market Summary**
   - Aggregated view of market metrics
@@ -55,7 +60,27 @@ reloads.
 - **Whale Inflow Monitoring**
   - Tracks large-volume movements on the blockchain
   - Based on on-chain data
-  - Updated hourly to help detect potential accumulation or distribution phases
+  - Uses the latest available on-chain data to monitor large BTC inflows
+
+### **Backtest Strategies**
+
+Select a bullish flip date, enter an investment amount in USDT, and choose a strategy:
+
+| Strategy | Simulation |
+| --- | --- |
+| Hold until today | Buy at the selected bullish flip and hold until the latest available candle close. |
+| Exit on next bearish flip | Buy at the selected bullish flip and sell at the first subsequent bearish flip. If no exit signal exists, keep the position open and value it at the latest available close. |
+| Follow all signals | Buy on bullish flips, sell on bearish flips, and reinvest the entire proceeds at each subsequent entry. Value any remaining BTC at the latest available close; otherwise retain cash. |
+
+The trade table includes entry and exit dates and prices, portfolio value, position status, **Trade return (%)**, and **Cumulative return (%)**. Cumulative return is measured against the initial investment and reflects reinvestment, rather than adding individual trade percentages. Returns on open positions are unrealized.
+
+**Simulation assumptions:**
+
+- Entries and exits use the signal candle's closing price (`CLOSE`); dates refer to candle closes (`CLOSE_TIME`) in UTC.
+- Only history loaded for the selected timeframe is available. "Today" means the latest available close, not a live market quote.
+- The strategy is long-only and uses the full available capital for each purchase, including fractional BTC.
+- Results exclude fees, slippage, and taxes. Execution at the exact signal close is a simplifying assumption, not a guarantee of achievable trading results.
+- Historical results do not predict future returns.
 
 ### **Design Assumptions**
 
@@ -64,45 +89,112 @@ The application is optimized for long-term investing:
 - Focus on higher timeframes (weekly data)
 - Limited need for high-frequency ingestion (daily batches are sufficient)
 - Separation of data sources:
-  - market data (daily)
-  - blockchain data (hourly)
+  - market data (daily candles)
+  - blockchain data (on-chain inflows)
 
-This design ensures that the data pipeline directly supports the analytical goals of the application.
+The Airflow DAG runs daily. Data freshness depends on ingestion, warehouse transformations, and application caching. This design ensures that the data pipeline directly supports the analytical goals of the application.
 
 ## **Tech Stack**
 
-**Languages, Frameworks and Environments:**
+**Languages**<br>
+`Python` · `SQL`
 
-    > Python
-    > SQL
-    > Docker / Docker Compose
-    > Streamlit
-    > GitHub Actions
+**Data Warehouse**<br>
+`Snowflake`
 
-**Data Engineering and Orchestration:**
+**Transformation and Testing**<br>
+`dbt`
 
-    > Apache Airflow
-    > dbt
-    > Snowflake
+**Orchestration**<br>
+`Apache Airflow`
 
-**Libraries and Packages:**
+**Application and Visualization**<br>
+`Streamlit` · `Plotly`
 
-    > pandas
-    > numpy
-    > plotly
-    > snowflake-connector-python
-    
+**Data Processing**<br>
+`pandas` · `NumPy`
+
+**Infrastructure and Deployment**<br>
+`Docker` · `Docker Compose` · `Hetzner VPS`
+
+**CI/CD**<br>
+`GitHub Actions`
 
 ## **Getting Started**
 
+### **Prerequisites**
+
+- Python 3.12 or newer; CI uses Python 3.12.
+- Access to Snowflake with key-pair authentication and permissions to read the application's data marts.
+- Existing price/Supertrend, halving, and whale-inflow marts in the configured Snowflake database and schema.
+- Docker with Docker Compose for the Airflow stack only; it is not required to run Streamlit locally.
+
+Cloning this repository does not provision Snowflake infrastructure or populate its datasets. The application reads prepared warehouse data; it does not bootstrap the pipeline on startup.
+
+### **Run the Application**
+
+From a terminal:
+
 ``` bash
-git clone https://github.com/your-username/bitcoin-investing-tool
+git clone https://github.com/michal-owsiak/crypto.git bitcoin-investing-tool
 cd bitcoin-investing-tool
 
-cp .env.example .env
-
-docker compose up --build
+python3 -m venv venv
+source venv/bin/activate
+python -m pip install -r app/requirements.txt
 ```
+
+Create a `.env` file in the repository root with your own Snowflake settings:
+
+``` dotenv
+SNOWFLAKE_USER=YOUR_USER
+SNOWFLAKE_ACCOUNT=YOUR_ACCOUNT
+SNOWFLAKE_WAREHOUSE=YOUR_WAREHOUSE
+SNOWFLAKE_DATABASE=YOUR_DATABASE
+SNOWFLAKE_PROD_SCHEMA=YOUR_MART_SCHEMA
+SNOWFLAKE_PRIVATE_KEY_PATH=/absolute/path/to/rsa_key.p8
+SNOWFLAKE_ROLE=YOUR_ROLE
+```
+
+Use a local, unencrypted PKCS#8 private key registered for your Snowflake user. `SNOWFLAKE_ROLE` is optional if the user's default role has the required permissions. Keep credentials and private keys out of version control.
+
+Then start the application from the repository root:
+
+``` bash
+python -m streamlit run app/streamlit_app.py
+```
+
+The application is available at http://localhost:8501 by default.
+
+### **Run the Pipeline**
+
+The Docker Compose stack runs Airflow and PostgreSQL, not the Streamlit application. Before starting it:
+
+- Provision the Snowflake source datasets and ingestion task used by the DAG.
+- Configure `airflow/.env` with the PostgreSQL settings and Airflow authentication secrets referenced in `airflow/docker-compose.yml`, plus the pipeline's Snowflake connection settings and `LOAD_TASK`.
+- Configure the `CRYPTO` profile in `dbt/profiles.yml`; use private-key paths accessible inside the container, such as `/opt/airflow/keys/rsa_key.p8` for a key placed in the root `keys/` directory.
+- Install dbt package dependencies and load the required seed data before the first pipeline run.
+- Prepare the local `airflow/simple_auth_passwords.json` file mounted by Compose.
+
+Once these environment-specific prerequisites are configured, run from the repository root:
+
+``` bash
+cd airflow
+docker compose up -d --build
+```
+
+The Airflow API/UI uses http://localhost:8080 by default. The host port can be overridden with `AIRFLOW_PORT`; the container continues to listen on port 8080. Snowflake provisioning, credentials, and initial data setup must be handled separately.
+
+## **Testing**
+
+From the repository root, with a Python environment activated:
+
+``` bash
+python -m pip install -r app/requirements.txt
+python -m unittest discover -s tests -v
+```
+
+The Python tests cover strategy calculations, reinvestment, open positions, input validation, Streamlit interactions, and candle-close dates in chart tooltips. They use synthetic data and do not require Snowflake credentials or a running Airflow stack. Data transformation tests remain under `dbt/tests/` and run separately through dbt.
 
 ## **Project Structure**
 
@@ -138,12 +230,14 @@ bitcoin-investing-tool/
 ├── app/                       # Streamlit application (serving layer)
 │   ├── charts/                  # Visualizations
 │   ├── components/              # UI sections
-│   ├── logic/                   # Market summary features
+│   ├── logic/                   # Market summary and backtest calculations
 │   ├── services/                # Data access layer (Snowflake)
 │   ├── styles/                  # Styling (CSS)
 │   └── streamlit_app.py         # Entry point
 │
 ├── shared/                    # Shared utilities (Snowflake client)
+│
+├── tests/                     # Python calculation, UI, and chart tests
 │
 └── README.md
 ```
