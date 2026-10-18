@@ -1,0 +1,22 @@
+name: Hetzner VPS DEV deployment CD
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run DEV deploy script on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            set -e
+            test -f /home/source/bitcoin-investing-tool-dev/deploy-dev.sh
+            bash /home/source/bitcoin-investing-tool-dev/deploy-dev.sh
