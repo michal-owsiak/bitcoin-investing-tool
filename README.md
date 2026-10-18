@@ -68,9 +68,11 @@ Select a bullish flip date, enter an investment amount in USDT, and choose a str
 
 | Strategy | Simulation |
 | --- | --- |
+| Follow all signals | Buy on bullish flips, sell on bearish flips, and reinvest the entire proceeds at each subsequent entry. Value any remaining BTC at the latest available close; otherwise retain cash. |
 | Hold until today | Buy at the selected bullish flip and hold until the latest available candle close. |
 | Exit on next bearish flip | Buy at the selected bullish flip and sell at the first subsequent bearish flip. If no exit signal exists, keep the position open and value it at the latest available close. |
-| Follow all signals | Buy on bullish flips, sell on bearish flips, and reinvest the entire proceeds at each subsequent entry. Value any remaining BTC at the latest available close; otherwise retain cash. |
+
+**Follow all signals** and the oldest available bullish flip are selected by default. Switching strategies preserves the selected entry date so results can be compared over the same period.
 
 The trade table includes entry and exit dates and prices, portfolio value, position status, **Trade return (%)**, and **Cumulative return (%)**. Cumulative return is measured against the initial investment and reflects reinvestment, rather than adding individual trade percentages. Returns on open positions are unrealized.
 

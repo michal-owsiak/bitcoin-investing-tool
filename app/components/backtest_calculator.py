@@ -62,6 +62,7 @@ def render_backtest_calculator(price_df, timeframe):
         entry_date = st.selectbox(
             'Bullish flip date',
             options=bullish['CLOSE_TIME'].map(lambda date: date.isoformat()).tolist(),
+            index=len(bullish) - 1,
             format_func=lambda date: pd.Timestamp(date).strftime('%Y-%m-%d'),
             key=f'backtest_entry_{timeframe}',
         )

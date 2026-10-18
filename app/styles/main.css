@@ -26,6 +26,10 @@ h3 {
     font-weight: 800 !important;
 }
 
+h3#backtest-reward-calculator {
+    font-size: 22px !important;
+}
+
 h4 {
     font-family: 'Archivo', sans-serif !important;
     font-size: 16px !important;
@@ -70,6 +74,11 @@ section[data-testid='stSidebar'] div[role='radiogroup'] label p {
 
 .st-key-market_summary h3 {
     font-size: 16.15px !important;
+}
+
+[data-testid="stExpander"]:has(.st-key-backtest_trade_details) summary:hover {
+    color: #3e4144 !important;
+    background-color: rgba(62, 65, 68, 0.04);
 }
 
 .st-key-backtest_trade_details [data-testid="stElementToolbarButton"]:has(button[aria-label="Search"]) {
