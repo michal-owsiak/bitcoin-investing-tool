@@ -1,0 +1,214 @@
+import json
+from pathlib import Path
+import unittest
+
+from streamlit.testing.v1 import AppTest
+
+
+APP_PATH = str(Path(__file__).resolve().parents[1] / 'app')
+APP = f'''
+import sys
+sys.path.insert(0, {APP_PATH!r})
+import pandas as pd
+import streamlit as st
+from components.backtest_calculator import render_backtest_calculator
+
+timeframe = st.selectbox('Timeframe', ['1W', '1D'], key='test_timeframe')
+data = pd.DataFrame({{
+    'OPEN_TIME': pd.date_range('2024-01-01', periods=4),
+    'CLOSE_TIME': pd.date_range('2024-01-02', periods=4),
+    'CLOSE': [100., 150., 120., 180.],
+    'SIGNAL_FLIP_UP': [True, False, True, False],
+    'SIGNAL_FLIP_DOWN': [False, True, False, False],
+}})
+if timeframe == '1D':
+    data = data.iloc[:2]
+chart_col, spacer_col, whale_col = st.columns([4, 0.2, 0.8])
+with chart_col:
+    render_backtest_calculator(data, timeframe)
+'''
+
+
+class BacktestUITests(unittest.TestCase):
+    def app(self):
+        app = AppTest.from_string(APP).run()
+        self.assertFalse(app.exception)
+        return app
+
+    def test_amount_and_entry_update_hold_result(self):
+        app = self.app()
+        self.assertEqual(app.metric[0].value, '1,500.00')
+        app.text_input[0].set_value('2000').run()
+        self.assertEqual(app.text_input[0].value, '2,000.00')
+        self.assertEqual(app.metric[0].value, '3,000.00')
+        app.selectbox(key='backtest_entry_1W').select_index(1).run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.metric[0].value, '3,600.00')
+
+    def test_investment_accepts_and_formats_grouped_amounts(self):
+        app = self.app()
+        self.assertEqual(app.text_input[0].value, '1,000.00')
+        for entered, formatted, portfolio in [
+            ('12345.67', '12,345.67', '18,518.51'),
+            ('1,234,567.80', '1,234,567.80', '1,851,851.70'),
+            (' 2500.5 ', '2,500.50', '3,750.75'),
+            ('0.01', '0.01', '0.01'),
+        ]:
+            with self.subTest(entered=entered):
+                app.text_input[0].set_value(entered).run()
+                self.assertFalse(app.exception)
+                self.assertEqual(app.text_input[0].value, formatted)
+                self.assertEqual(app.metric[0].value, portfolio)
+
+    def test_invalid_investment_shows_warning_without_results(self):
+        app = self.app()
+        for entered in ['', '0', '-10', '1,23', '1.000,00', 'NaN', '1,000.001']:
+            with self.subTest(entered=entered):
+                app.text_input[0].set_value(entered).run()
+                self.assertFalse(app.exception)
+                self.assertEqual(len(app.warning), 1)
+                self.assertEqual(len(app.metric), 0)
+                self.assertEqual(len(app.dataframe), 0)
+        app.text_input[0].set_value('1000').run()
+        self.assertEqual(len(app.warning), 0)
+        self.assertEqual(app.metric[0].value, '1,500.00')
+
+    def test_investment_buttons_preserve_format_and_recalculate(self):
+        app = self.app()
+        app.button(key='backtest_increase').click().run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.text_input[0].value, '1,100.00')
+        self.assertEqual(app.metric[0].value, '1,650.00')
+        app.button(key='backtest_decrease').click().run()
+        self.assertEqual(app.text_input[0].value, '1,000.00')
+        app.text_input[0].set_value('12345.67').run()
+        app.button(key='backtest_increase').click().run()
+        self.assertEqual(app.text_input[0].value, '12,445.67')
+
+    def test_decrease_button_respects_minimum_investment(self):
+        app = self.app()
+        app.text_input[0].set_value('50').run()
+        app.button(key='backtest_decrease').click().run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.text_input[0].value, '0.01')
+        self.assertTrue(app.button(key='backtest_decrease').disabled)
+        self.assertFalse(app.button(key='backtest_increase').disabled)
+        app.button(key='backtest_increase').click().run()
+        self.assertEqual(app.text_input[0].value, '100.01')
+
+    def test_investment_buttons_disabled_for_invalid_amount(self):
+        app = self.app()
+        app.text_input[0].set_value('invalid').run()
+        self.assertFalse(app.exception)
+        self.assertTrue(app.button(key='backtest_decrease').disabled)
+        self.assertTrue(app.button(key='backtest_increase').disabled)
+
+    def test_portfolio_table_formats_two_decimal_places(self):
+        app = self.app()
+        columns = json.loads(app.dataframe[0].proto.columns)
+        self.assertEqual(columns['Portfolio value (USDT)']['type_config']['format'], '%.2f')
+
+    def test_market_summary_only_shrinks_headings_and_colored_values(self):
+        app = AppTest.from_string(APP + '''
+from components.dashboard_sections import render_market_summary
+render_market_summary({
+    'current_trend': 'Bullish',
+    'last_flip_date': pd.Timestamp('2024-01-01'),
+    'days_since_flip': 3,
+    'return_since_flip': 50,
+    'distance_to_supertrend_pct': 20,
+    'entry_price': 100,
+    'current_price': 150,
+})
+''').run()
+        self.assertFalse(app.exception)
+        summary = '\n'.join(item.value for item in app.markdown if 'font-size:12px' in item.value)
+        self.assertIn('Trend', summary)
+        self.assertIn('Change', summary)
+        self.assertIn('Distance to Supertrend', summary)
+        self.assertEqual(summary.count('font-size:17px;'), 3)
+        self.assertTrue(any('font-size:13px;' in item.value for item in app.markdown))
+        css = (Path(APP_PATH) / 'styles' / 'main.css').read_text()
+        self.assertIn('.st-key-market_summary h3 {\n    font-size: 16.15px !important;', css)
+        self.assertNotIn('.st-key-market_summary p', css)
+        self.assertNotIn('.st-key-market_summary [data-testid="stMetric', css)
+        self.assertEqual(len(app.warning), 1)
+
+    def test_exit_without_bearish_flip_displays_open_position(self):
+        app = self.app()
+        app.selectbox(key='backtest_strategy').select('Exit on next bearish flip').run()
+        self.assertFalse(app.exception)
+        self.assertIn('No subsequent bearish flip', app.info[0].value)
+        self.assertEqual(app.metric[0].value, '1,500.00')
+
+    def test_exit_and_follow_display_expected_results(self):
+        app = self.app()
+        app.selectbox(key='backtest_entry_1W').select_index(1).run()
+        app.selectbox(key='backtest_strategy').select('Exit on next bearish flip').run()
+        self.assertEqual(app.metric[0].value, '1,500.00')
+        self.assertTrue(any('Exit candle: 2024-01-02' in item.value for item in app.caption))
+        app.selectbox(key='backtest_strategy').select('Follow all signals').run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.metric[0].value, '2,250.00')
+        self.assertEqual(len(app.dataframe[0].value), 2)
+        self.assertTrue(app.expander[0].proto.expanded)
+
+    def test_trade_details_are_expanded_for_every_strategy(self):
+        for strategy in ['Hold until today', 'Exit on next bearish flip', 'Follow all signals']:
+            with self.subTest(strategy=strategy):
+                app = self.app()
+                app.selectbox(key='backtest_strategy').select(strategy).run()
+                self.assertFalse(app.exception)
+                self.assertEqual(len(app.dataframe), 1)
+                self.assertTrue(app.expander[0].proto.expanded)
+                self.assertEqual(app.dataframe[0].value.iloc[0]['Status'], 'Open')
+                app.selectbox(key='backtest_entry_1W').select_index(1).run()
+                self.assertFalse(app.exception)
+                self.assertEqual(len(app.dataframe), 1)
+                self.assertTrue(app.expander[0].proto.expanded)
+                expected_status = 'Open' if strategy == 'Hold until today' else 'Closed'
+                self.assertEqual(app.dataframe[0].value.iloc[0]['Status'], expected_status)
+
+    def test_profit_and_return_use_market_status_colors(self):
+        for latest_price, color, profit, return_pct in [
+            (180, '#23a88e', '+500.00', '+50.00%'),
+            (60, '#f14c4a', '-500.00', '-50.00%'),
+            (120, '#23a88e', '+0.00', '+0.00%'),
+        ]:
+            with self.subTest(latest_price=latest_price):
+                app = AppTest.from_string(APP.replace(
+                    '120., 180.', f'120., {latest_price}.',
+                )).run()
+                self.assertFalse(app.exception)
+                results = [item.value for item in app.markdown if f'color:{color};' in item.value]
+                self.assertEqual(len(results), 2)
+                self.assertIn(profit, results[0])
+                self.assertIn(return_pct, results[1])
+
+    def test_timeframe_change_uses_available_entry(self):
+        app = self.app()
+        app.selectbox(key='test_timeframe').select('1D').run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.metric[0].value, '1,500.00')
+        self.assertEqual(len(app.selectbox(key='backtest_entry_1D').options), 1)
+
+    def test_no_bullish_flips(self):
+        app = AppTest.from_string(APP.replace(
+            "render_backtest_calculator(data, timeframe)",
+            "data['SIGNAL_FLIP_UP'] = False\nrender_backtest_calculator(data, timeframe)",
+        )).run()
+        self.assertFalse(app.exception)
+        self.assertIn('No bullish flips', app.info[0].value)
+        self.assertEqual(len(app.metric), 0)
+
+    def test_empty_data(self):
+        app = AppTest.from_string(APP.replace(
+            'render_backtest_calculator(data, timeframe)',
+            'render_backtest_calculator(data.iloc[:0], timeframe)',
+        )).run()
+        self.assertFalse(app.exception)
+        self.assertIn('No price data', app.info[0].value)
+
+
+if __name__ == '__main__':
+    unittest.main()

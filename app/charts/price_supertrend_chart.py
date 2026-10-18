@@ -9,6 +9,7 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
 
     price_df = price_df.copy()
     price_df['OPEN_TIME'] = pd.to_datetime(price_df['OPEN_TIME'], errors='coerce')
+    price_df['CLOSE_TIME'] = pd.to_datetime(price_df['CLOSE_TIME'], errors='coerce')
 
     numeric_cols = ['OPEN', 'HIGH', 'LOW', 'CLOSE', 'VOLUME', 'NUMBER_OF_TRADES']
     for col in numeric_cols:
@@ -77,8 +78,9 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
                 color='rgba(0,0,0,0)'
             ),
             customdata=price_df[['OPEN', 'HIGH', 'LOW', 'CLOSE', 'VOLUME', 'NUMBER_OF_TRADES']].to_numpy(),
+            text=price_df['CLOSE_TIME'].dt.strftime('%Y-%m-%d'),
             hovertemplate=(
-                'Open date: %{x|%Y-%m-%d}<br>'
+                'Close date: %{text}<br>'
                 'Open: $%{customdata[0]:,.2f}<br>'
                 'High: $%{customdata[1]:,.2f}<br>'
                 'Low: $%{customdata[2]:,.2f}<br>'
@@ -125,10 +127,11 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
                     line=dict(width=0)
                 ),
                 customdata=flip_up_df[['CLOSE']].to_numpy(),
+                text=flip_up_df['CLOSE_TIME'].dt.strftime('%Y-%m-%d'),
                 hovertemplate=(
                     'Bullish Flip<br>'
-                    'Date: %{x|%Y-%m-%d}<br>'
-                    'Close: $%{customdata[0]:,.2f}'
+                    'Candle close date: %{text}<br>'
+                    'Close price: $%{customdata[0]:,.2f}'
                     '<extra></extra>'
                 )
             )
@@ -148,10 +151,11 @@ def build_price_supertrend_chart(price_df: pd.DataFrame, halvings_df: pd.DataFra
                     line=dict(width=0)
                 ),
                 customdata=flip_down_df[['CLOSE']].to_numpy(),
+                text=flip_down_df['CLOSE_TIME'].dt.strftime('%Y-%m-%d'),
                 hovertemplate=(
                     'Bearish Flip<br>'
-                    'Date: %{x|%Y-%m-%d}<br>'
-                    'Close: $%{customdata[0]:,.2f}'
+                    'Candle close date: %{text}<br>'
+                    'Close price: $%{customdata[0]:,.2f}'
                     '<extra></extra>'
                 )
             )

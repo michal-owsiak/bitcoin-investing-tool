@@ -8,6 +8,7 @@ from services.data_loader import (
     get_whale_inflow_data,
 )
 from logic.market_summary import calculate_market_summary
+from components.backtest_calculator import render_backtest_calculator
 from charts import build_price_supertrend_chart, build_whale_inflow_monitor
 from components.dashboard_sections import (
     render_market_summary
@@ -44,6 +45,7 @@ col_1, col_2, col_3 = st.columns([4, 0.2, 0.8])
 
 with col_1:
     st.plotly_chart(price_fig, use_container_width=True)
+    render_backtest_calculator(price_df, timeframe)
 
 with col_2:
     st.write('')
