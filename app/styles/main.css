@@ -26,6 +26,10 @@ h3 {
     font-weight: 800 !important;
 }
 
+h3#backtest-reward-calculator {
+    font-size: 22px !important;
+}
+
 h4 {
     font-family: 'Archivo', sans-serif !important;
     font-size: 16px !important;
@@ -66,6 +70,69 @@ section[data-testid='stSidebar'] div[role='radiogroup'] label p {
 [data-testid="stMetricValue"] {
     font-size: 21px !important;
     font-weight: 600;
+}
+
+.st-key-market_summary h3 {
+    font-size: 16.15px !important;
+}
+
+[data-testid="stExpander"]:has(.st-key-backtest_trade_details) summary:hover {
+    color: #3e4144 !important;
+    background-color: rgba(62, 65, 68, 0.04);
+}
+
+.st-key-backtest_trade_details [data-testid="stElementToolbarButton"]:has(button[aria-label="Search"]) {
+    display: none;
+}
+
+.st-key-backtest_investment_control {
+    position: relative;
+    gap: 0;
+}
+
+.st-key-backtest_investment_control input {
+    padding-right: 88px !important;
+}
+
+.st-key-backtest_investment_decrease,
+.st-key-backtest_investment_increase {
+    position: absolute;
+    bottom: 0;
+    width: 40px;
+    height: 40px;
+    z-index: 1;
+}
+
+.st-key-backtest_investment_decrease {
+    right: 40px;
+}
+
+.st-key-backtest_investment_increase {
+    right: 0;
+}
+
+.st-key-backtest_decrease,
+.st-key-backtest_increase,
+.st-key-backtest_decrease [data-testid="stButton"],
+.st-key-backtest_increase [data-testid="stButton"] {
+    width: 40px !important;
+    max-width: 40px;
+}
+
+.st-key-backtest_investment_decrease button,
+.st-key-backtest_investment_increase button {
+    width: 40px;
+    min-width: 0;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.st-key-backtest_investment_decrease button:hover,
+.st-key-backtest_investment_increase button:hover {
+    background: rgba(0, 0, 0, 0.06);
 }
 
 .footer {

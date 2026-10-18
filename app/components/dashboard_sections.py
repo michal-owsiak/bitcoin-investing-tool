@@ -1,7 +1,8 @@
 import streamlit as st
 
 def render_market_summary(summary):
-    bottom_col_1, bottom_col_2, bottom_col_3 = st.columns([1, 1, 0.5])
+    with st.container(key='market_summary'):
+        bottom_col_1, bottom_col_2, bottom_col_3 = st.columns([1, 1, 0.5])
 
     with bottom_col_1:
         st.subheader('Market Status')
@@ -20,7 +21,7 @@ def render_market_summary(summary):
 
         st.markdown(f'''
             <div style='font-size:12px;'>Trend</div>
-            <div style='font-size:20px; font-weight:600; color:{trend_color};'>
+            <div style='font-size:17px; font-weight:600; color:{trend_color};'>
                 {trend_text}
             </div>
         ''', unsafe_allow_html=True)
@@ -51,7 +52,7 @@ def render_market_summary(summary):
 
                 st.markdown(f'''
                 <div style='font-size:12px'>Change</div>
-                <div style='font-size:20px; font-weight:600; color:{ret_color};'>
+                <div style='font-size:17px; font-weight:600; color:{ret_color};'>
                     {ret:.2f}%
                 </div>
                 ''', unsafe_allow_html=True)
@@ -80,7 +81,7 @@ def render_market_summary(summary):
 
             st.markdown(f'''
                 <div style='font-size:12px; color:#6b7280;'>Distance to Supertrend</div>
-                <div style='font-size:20px; font-weight:600; color:{dist_color};'>
+                <div style='font-size:17px; font-weight:600; color:{dist_color};'>
                     {dist:.2f}%
                 </div>
             ''', unsafe_allow_html=True)
