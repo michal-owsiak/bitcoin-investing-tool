@@ -91,6 +91,20 @@ def calculate_backtest(price_df, entry_date, investment, strategy):
     final_value = cash + btc * float(latest['CLOSE'])
     if not math.isfinite(final_value):
         raise ValueError('The calculated portfolio value is too large.')
+
+    period_end = latest['CLOSE_TIME']
+    if (
+        strategy == 'Exit on next bearish flip'
+        and trades
+        and trades[-1]['exit_date'] is not None
+    ):
+        period_end = trades[-1]['exit_date']
+    entry_time = entry['CLOSE_TIME']
+    annualized_return_pct = None
+    if period_end >= entry_time + pd.DateOffset(years=1) and final_value > 0:
+        period_years = (period_end - entry_time).total_seconds() / (365.2425 * 86400)
+        annualized_return_pct = (final_value / investment) ** (1 / period_years) * 100 - 100
+
     if btc > 0:
         trades.append({
             'entry_date': current_entry['CLOSE_TIME'],
@@ -112,6 +126,7 @@ def calculate_backtest(price_df, entry_date, investment, strategy):
         'final_value': final_value,
         'profit': final_value - investment,
         'return_pct': (final_value / investment - 1) * 100,
+        'annualized_return_pct': annualized_return_pct,
         'closed_trades': sum(trade['status'] == 'Closed' for trade in trades),
         'execution_count': execution_count,
         'position_open': btc > 0,

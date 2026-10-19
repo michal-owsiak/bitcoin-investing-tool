@@ -8,8 +8,12 @@ from services.data_loader import (
     get_whale_inflow_data,
 )
 from logic.market_summary import calculate_market_summary
-from components.backtest_calculator import render_backtest_calculator
-from charts import build_price_supertrend_chart, build_whale_inflow_monitor
+from components.backtest_calculator import (
+    get_selected_backtest_trades,
+    render_backtest_calculator,
+)
+from charts import build_whale_inflow_monitor
+from charts.lightweight_price_chart import CHART_TITLE, render_lightweight_price_chart
 from components.dashboard_sections import (
     render_market_summary
 )
@@ -20,53 +24,62 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 load_css('../styles/main.css')
 
 
-header_col_1, header_col_2 = st.columns([5, 1.7])
+st.title('Bitcoin Investing Tool')
 
-with header_col_1:
-    st.title('Bitcoin Investing Tool')
-
-with header_col_2:
-    timeframe = st.segmented_control(
-        label="",
-        options=['1W', '1D'],
-        default='1W'
-    )
+col_1, col_2, col_3 = st.columns([4, 0.2, 0.8])
+if st.session_state.get('chart_timeframe') not in {'1W', '1D'}:
+    st.session_state['chart_timeframe'] = '1W'
+with col_1:
+    timeframe_col, title_col, spacer_col = st.columns([1, 4, 1])
+    with timeframe_col:
+        timeframe = st.segmented_control(
+            label='Timeframe',
+            options=['1W', '1D'],
+            default='1W',
+            key='chart_timeframe',
+        )
+    with title_col:
+        st.markdown(
+            f'<div style="padding-top:31px;text-align:center;font-family:Archivo,Arial,sans-serif;font-size:19px;font-weight:700;line-height:22px;">{CHART_TITLE}</div>',
+            unsafe_allow_html=True,
+        )
 
 price_df = get_price_data(timeframe)
 halvings_df = get_halvings_data()
 whales_df = get_whale_inflow_data()
 
-price_fig = build_price_supertrend_chart(price_df, halvings_df)
 whale_fig = build_whale_inflow_monitor(whales_df)
 summary = calculate_market_summary(price_df)
 
-
-col_1, col_2, col_3 = st.columns([4, 0.2, 0.8])
+backtest_trades = get_selected_backtest_trades(price_df, timeframe)
 
 with col_1:
-    st.plotly_chart(price_fig, use_container_width=True)
+    render_lightweight_price_chart(price_df, halvings_df, backtest_trades)
     render_backtest_calculator(price_df, timeframe)
 
 with col_2:
     st.write('')
 
 with col_3:
-    st.subheader('BTC Whale Inflow Monitor (updates hourly)')
+    st.markdown(
+        "<div class='whale-monitor-heading'>"
+        "<h3>BTC Whale Inflow Monitor</h3>"
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
     st.metric('Whale addresses (>10 BTC inflow)', len(whales_df))
     st.metric('Total BTC inflow', f'{whales_df['total_output_value'].sum():,.2f}')
     st.metric('Avg inflow / address', f'{whales_df['total_output_value'].mean():,.2f}')
 
     st.markdown(
-        '''
-            <h4 style>
-                Top Whale Inflows
-            </h4>    
-        ''',
+        "<div class='whale-top-inflows-heading'>"
+        "<h4>Top Whale Inflows (hourly)</h4>"
+        '</div>',
         unsafe_allow_html=True
     )
 
-    st.plotly_chart(whale_fig, use_container_width=True)
+    st.plotly_chart(whale_fig, use_container_width=True, key='whale_inflow_plot')
 
 
 st.markdown('---')
@@ -77,8 +90,6 @@ st.markdown(
     '''
         <div class='footer'>
             © 2026 Michał Owsiak - Bitcoin Investing Tool
-            <br/>
-            <br/>
         </div>
     ''',
     unsafe_allow_html=True
