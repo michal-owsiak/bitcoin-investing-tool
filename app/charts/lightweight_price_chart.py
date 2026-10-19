@@ -10,13 +10,13 @@ CHART_LIBRARY_URL = (
 CHART_HEIGHT = 750
 CHART_TITLE = 'BTC Price (USDT) with Supertrend'
 CHART_LEGEND_HTML = '''
-<div role="group" aria-label="Chart legend" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:0 0 5px;color:#6b7280;font:11px Geist,Arial,sans-serif;">
+<div role="group" aria-label="Chart legend" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:0 0 5px;color:inherit;font:11px Geist,Arial,sans-serif;">
   <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid #159b87;"></span>Bullish flip</span>
   <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:10px solid #e4474d;"></span>Bearish flip</span>
   <span style="display:inline-flex;align-items:center;gap:5px;"><span style="padding:2px 5px;border-radius:3px;background:#159b87;color:#fff;font-size:9px;">BUY</span>Selected strategy buy</span>
   <span style="display:inline-flex;align-items:center;gap:5px;"><span style="padding:2px 5px;border-radius:3px;background:#e4474d;color:#fff;font-size:9px;">SELL</span>Selected strategy sell</span>
-  <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:14px;border-top:1px dashed #526070;"></span>Halving</span>
-  <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:14px;border-top:2px dotted #9d601b;"></span>Expected halving</span>
+  <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:14px;border-top:1px dashed currentColor;"></span>Halving</span>
+  <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:14px;border-top:2px dotted #d49c4a;"></span>Expected halving</span>
 </div>
 '''
 
@@ -171,16 +171,17 @@ HTML_TEMPLATE = r'''<!doctype html>
 <style>
 * { box-sizing: border-box; }
 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
-body { font-family: Geist, Arial, sans-serif; color: #3e4144; background: #fbfbfb; }
+body { --chart-background: #fbfbfb; --chart-foreground: #3e4144; --chart-muted: #6b7280; --chart-grid: rgba(62,65,68,.07); --chart-border: rgba(62,65,68,.18); --tooltip-background: rgba(251,251,251,.96); --tooltip-shadow: 0 2px 8px rgba(0,0,0,.08); font-family: Geist, Arial, sans-serif; color: var(--chart-foreground); background: var(--chart-background); }
+body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --chart-muted: #aab4c2; --chart-grid: rgba(214,222,232,.09); --chart-border: rgba(214,222,232,.2); --tooltip-background: rgba(25,30,39,.98); --tooltip-shadow: 0 2px 10px rgba(0,0,0,.38); }
 #chart-shell { position: relative; width: 100%; height: __CHART_HEIGHT__px; }
 #chart { width: 100%; height: 100%; }
 #trend-fill { position: absolute; z-index: 1; pointer-events: none; overflow: hidden; }
-#tooltip { display: none; position: absolute; z-index: 3; max-width: 220px; padding: 8px 10px; border: 1px solid rgba(62,65,68,.14); border-radius: 4px; background: rgba(251,251,251,.96); box-shadow: 0 2px 8px rgba(0,0,0,.08); font-size: 12px; line-height: 1.5; pointer-events: none; }
-#tooltip-date { margin-bottom: 3px; color: #6b7280; }
+#tooltip { display: none; position: absolute; z-index: 3; max-width: 220px; padding: 8px 10px; border: 1px solid var(--chart-border); border-radius: 4px; background: var(--tooltip-background); box-shadow: var(--tooltip-shadow); font-size: 12px; line-height: 1.5; pointer-events: none; }
+#tooltip-date { margin-bottom: 3px; color: var(--chart-muted); }
 #tooltip-values { display: flex; flex-direction: column; gap: 2px; }
 #tooltip-values span { white-space: nowrap; }
-#tooltip-values strong { color: #3e4144; font-weight: 600; }
-#chart-credit { position: absolute; right: 8px; bottom: 3px; z-index: 2; color: #6b7280; font-size: 10px; }
+#tooltip-values strong { color: var(--chart-foreground); font-weight: 600; }
+#chart-credit { position: absolute; right: 8px; bottom: 3px; z-index: 2; color: var(--chart-muted); font-size: 10px; }
 #chart-credit a { color: inherit; text-decoration: underline; }
 </style>
 </head>
@@ -211,17 +212,92 @@ body { font-family: Geist, Arial, sans-serif; color: #3e4144; background: #fbfbf
   const trendFill = document.getElementById('trend-fill');
   const bullishColor = '#159b87';
   const bearishColor = '#e4474d';
-  const bullishFill = 'rgba(21,155,135,.13)';
-  const bearishFill = 'rgba(228,71,77,.13)';
+
+  function detectHostTheme() {
+    try {
+      const parentDocument = window.parent.document;
+      const candidates = [
+        parentDocument.querySelector('[data-testid="stApp"]'),
+        parentDocument.querySelector('[data-testid="stAppViewContainer"]'),
+        parentDocument.body,
+      ];
+      for (const candidate of candidates) {
+        if (!candidate) continue;
+        const hostStyle = window.parent.getComputedStyle(candidate);
+        const background = hostStyle.backgroundColor;
+        const channels = background.match(/[\d.]+/g)?.map(Number);
+        if (!channels || channels.length < 3 || (channels[3] ?? 1) < 0.05) continue;
+        const linear = channels.slice(0, 3).map(channel => {
+          const normalized = channel / 255;
+          return normalized <= 0.04045
+            ? normalized / 12.92
+            : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return {
+          dark: 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2] < 0.38,
+          background: `rgb(${channels.slice(0, 3).map(Math.round).join(', ')})`,
+          foreground: hostStyle.color,
+        };
+      }
+    } catch (_) {}
+    const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+    return {
+      dark,
+      background: dark ? '#0e1117' : '#ffffff',
+      foreground: dark ? '#e6e9ef' : '#3e4144',
+    };
+  }
+
+  function paletteForTheme(host) {
+    return host.dark ? {
+      background: host.background, foreground: host.foreground || '#e6e9ef', muted: '#aab4c2',
+      grid: 'rgba(214,222,232,.09)', border: 'rgba(214,222,232,.2)',
+      tooltipBackground: 'rgba(25,30,39,.98)', tooltipShadow: '0 2px 10px rgba(0,0,0,.38)',
+      bullishFill: 'rgba(21,155,135,.2)', bearishFill: 'rgba(228,71,77,.2)',
+      historicalLine: 'rgba(174,187,201,.82)', historicalLabel: '#b6c1ce',
+      expectedLine: 'rgba(224,169,85,.98)', expectedLabel: '#e0a955',
+    } : {
+      background: host.background, foreground: host.foreground || '#3e4144', muted: '#6b7280',
+      grid: 'rgba(62,65,68,.07)', border: 'rgba(62,65,68,.18)',
+      tooltipBackground: host.background, tooltipShadow: '0 2px 8px rgba(0,0,0,.08)',
+      bullishFill: 'rgba(21,155,135,.13)', bearishFill: 'rgba(228,71,77,.13)',
+      historicalLine: 'rgba(82,96,112,.88)', historicalLabel: '#526070',
+      expectedLine: 'rgba(157,96,27,.92)', expectedLabel: '#9d601b',
+    };
+  }
+
+  function applyDocumentPalette(palette, dark) {
+    const properties = {
+      '--chart-background': palette.background,
+      '--chart-foreground': palette.foreground,
+      '--chart-muted': palette.muted,
+      '--chart-grid': palette.grid,
+      '--chart-border': palette.border,
+      '--tooltip-background': palette.tooltipBackground,
+      '--tooltip-shadow': palette.tooltipShadow,
+    };
+    for (const [name, value] of Object.entries(properties)) {
+      document.body.style.setProperty(name, value);
+    }
+    document.body.classList.toggle('dark-theme', dark);
+    try {
+      window.parent.document.body.classList.toggle('btc-dark-theme', dark);
+    } catch (_) {}
+  }
+
+  let hostTheme = detectHostTheme();
+  let darkTheme = hostTheme.dark;
+  let palette = paletteForTheme(hostTheme);
+  applyDocumentPalette(palette, darkTheme);
   const chart = LightweightCharts.createChart(container, {
     width: container.clientWidth,
     height: container.clientHeight,
-    layout: { background: { color: '#fbfbfb' }, textColor: '#6b7280', fontFamily: 'Geist, Arial, sans-serif', attributionLogo: false },
-    grid: { vertLines: { color: 'rgba(62,65,68,.07)' }, horzLines: { color: 'rgba(62,65,68,.07)' } },
+    layout: { background: { color: palette.background }, textColor: palette.muted, fontFamily: 'Geist, Arial, sans-serif', attributionLogo: false },
+    grid: { vertLines: { color: palette.grid }, horzLines: { color: palette.grid } },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-    rightPriceScale: { borderColor: 'rgba(62,65,68,.18)', scaleMargins: {top: 0.22, bottom: 0.15} },
+    rightPriceScale: { borderColor: palette.border, scaleMargins: {top: 0.22, bottom: 0.15} },
     leftPriceScale: { visible: false, borderVisible: false, scaleMargins: {top: 0.82, bottom: 0} },
-    timeScale: { borderColor: 'rgba(62,65,68,.18)', timeVisible: false, rightOffset: 5, fixLeftEdge: true },
+    timeScale: { borderColor: palette.border, timeVisible: false, rightOffset: 5, fixLeftEdge: true },
     localization: { locale: 'en-US' },
     handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
     handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
@@ -290,8 +366,8 @@ body { font-family: Geist, Arial, sans-serif; color: #3e4144; background: #fbfbf
     const start = Math.max(0, Math.floor(range.from));
     const end = Math.min(timelineTimes.length - 1, Math.ceil(range.to));
     const trends = [
-      {active: row => row.bullTrend, color: bullishFill},
-      {active: row => row.bearTrend, color: bearishFill},
+      {active: row => row.bullTrend, color: palette.bullishFill},
+      {active: row => row.bearTrend, color: palette.bearishFill},
     ];
 
     for (const trend of trends) {
@@ -340,7 +416,7 @@ body { font-family: Geist, Arial, sans-serif; color: #3e4144; background: #fbfbf
       const marker = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
       marker.setAttribute('points', points);
       marker.setAttribute('fill', row.bullFlip ? bullishColor : bearishColor);
-      marker.setAttribute('stroke', '#fbfbfb');
+      marker.setAttribute('stroke', palette.background);
       marker.setAttribute('stroke-width', '1');
       trendFill.appendChild(marker);
     }
@@ -355,7 +431,7 @@ body { font-family: Geist, Arial, sans-serif; color: #3e4144; background: #fbfbf
       line.setAttribute('x2', x);
       line.setAttribute('y1', 48);
       line.setAttribute('y2', trendFill.clientHeight - 1);
-      line.setAttribute('stroke', halving.projected ? 'rgba(157,96,27,.92)' : 'rgba(82,96,112,.88)');
+      line.setAttribute('stroke', halving.projected ? palette.expectedLine : palette.historicalLine);
       line.setAttribute('stroke-width', '1');
       line.setAttribute('stroke-dasharray', halving.projected ? '2 3' : '5 5');
       trendFill.appendChild(line);
@@ -364,7 +440,7 @@ body { font-family: Geist, Arial, sans-serif; color: #3e4144; background: #fbfbf
       label.setAttribute('x', labelOnLeft ? x - 5 : x + 5);
       label.setAttribute('y', 40);
       label.setAttribute('text-anchor', labelOnLeft ? 'end' : 'start');
-      label.setAttribute('fill', halving.projected ? '#9d601b' : '#526070');
+      label.setAttribute('fill', halving.projected ? palette.expectedLabel : palette.historicalLabel);
       label.setAttribute('font-size', '11');
       label.textContent = halving.label;
       trendFill.appendChild(label);
@@ -416,6 +492,27 @@ body { font-family: Geist, Arial, sans-serif; color: #3e4144; background: #fbfbf
   container.addEventListener('pointermove', scheduleTrendFill, {passive: true});
   container.addEventListener('wheel', scheduleTrendFill, {passive: true});
   container.addEventListener('pointerup', scheduleTrendFill, {passive: true});
+
+  function syncChartTheme() {
+    const nextTheme = detectHostTheme();
+    if (
+      nextTheme.dark === hostTheme.dark
+      && nextTheme.background === hostTheme.background
+      && nextTheme.foreground === hostTheme.foreground
+    ) return;
+    hostTheme = nextTheme;
+    darkTheme = hostTheme.dark;
+    palette = paletteForTheme(hostTheme);
+    applyDocumentPalette(palette, darkTheme);
+    chart.applyOptions({
+      layout: {background: {color: palette.background}, textColor: palette.muted},
+      grid: {vertLines: {color: palette.grid}, horzLines: {color: palette.grid}},
+      rightPriceScale: {borderColor: palette.border},
+      timeScale: {borderColor: palette.border},
+    });
+    scheduleTrendFill();
+  }
+  setInterval(syncChartTheme, 1000);
 
   chart.subscribeCrosshairMove(param => {
     scheduleTrendFill();

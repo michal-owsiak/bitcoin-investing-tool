@@ -53,8 +53,22 @@ h3#backtest-reward-calculator {
 }
 
 .whale-top-inflows-heading span {
-    color: #6b7280;
+    color: inherit;
+    opacity: 0.75;
     font-size: 12px;
+}
+
+.market-summary-detail {
+    color: inherit;
+    font-size: 13px;
+    line-height: 1.4;
+    opacity: 0.82;
+}
+
+.market-summary-label {
+    color: inherit;
+    font-size: 12px;
+    opacity: 0.72;
 }
 
 h4 {
@@ -99,13 +113,21 @@ section[data-testid='stSidebar'] div[role='radiogroup'] label p {
     font-weight: 600;
 }
 
+body.btc-dark-theme [data-testid="stMetricLabel"],
+body.btc-dark-theme [data-testid="stMetricLabel"] *,
+body.btc-dark-theme [data-testid="stMetricValue"],
+body.btc-dark-theme [data-testid="stMetricValue"] * {
+    color: #e6e9ef !important;
+    opacity: 1 !important;
+}
+
 .st-key-market_summary h3 {
     font-size: 16.15px !important;
 }
 
 [data-testid="stExpander"]:has(.st-key-backtest_trade_details) summary:hover {
-    color: #3e4144 !important;
-    background-color: rgba(62, 65, 68, 0.04);
+    color: inherit !important;
+    background-color: rgba(128, 128, 128, 0.08);
 }
 
 .st-key-backtest_trade_details [data-testid="stElementToolbarButton"]:has(button[aria-label="Search"]) {
@@ -169,7 +191,7 @@ section[data-testid='stSidebar'] div[role='radiogroup'] label p {
     width: auto;
     text-align: right;
     font-size: 12px;
-    color: #9aa0a6;
-    opacity: 0.7;
+    color: inherit;
+    opacity: 0.55;
     pointer-events: none;
 }

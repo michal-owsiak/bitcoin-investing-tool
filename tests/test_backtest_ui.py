@@ -225,13 +225,19 @@ render_market_summary({
 })
 ''').run()
         self.assertFalse(app.exception)
-        summary = '\n'.join(item.value for item in app.markdown if 'font-size:12px' in item.value)
+        summary = '\n'.join(
+            item.value for item in app.markdown
+            if 'font-size:12px' in item.value or 'market-summary-label' in item.value
+        )
         self.assertIn('Trend', summary)
         self.assertIn('Change', summary)
         self.assertIn('Distance to Supertrend', summary)
         self.assertEqual(summary.count('font-size:17px;'), 3)
-        self.assertTrue(any('font-size:13px;' in item.value for item in app.markdown))
+        self.assertNotIn('color:#3a3a3a', summary)
+        self.assertIn('.market-summary-detail {', (Path(APP_PATH) / 'styles' / 'main.css').read_text())
         css = (Path(APP_PATH) / 'styles' / 'main.css').read_text()
+        self.assertIn('font-size: 13px;', css)
+        self.assertIn('body.btc-dark-theme [data-testid="stMetricLabel"]', css)
         self.assertIn('.st-key-market_summary h3 {\n    font-size: 16.15px !important;', css)
         self.assertNotIn('.st-key-market_summary p', css)
         self.assertNotIn('.st-key-market_summary [data-testid="stMetric', css)

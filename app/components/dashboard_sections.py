@@ -30,10 +30,10 @@ def render_market_summary(summary):
         if summary['last_flip_date'] is not None:
             st.write('')
             st.markdown(f'''
-                <div style='font-size:13px; color:#3a3a3a; line-height:1.4;'>
+                <div class='market-summary-detail'>
                     Last flip date: <strong>{summary['last_flip_date'].date()}</strong>
                 </div>
-                <div style='font-size:13px; color:#3a3a3a; line-height:1.4;'>
+                <div class='market-summary-detail'>
                     Days since flip: <strong>{summary['days_since_flip']}</strong>
                 </div>
             ''', unsafe_allow_html=True)
@@ -63,10 +63,10 @@ def render_market_summary(summary):
         
         st.write('')
         st.markdown(f'''
-            <div style='font-size:13px; color:#3a3a3a; line-height:1.4;'>
+            <div class='market-summary-detail'>
                 Entry price: <strong>${summary['entry_price']:,.2f}</strong>
             </div>
-            <div style='font-size:13px; color:#3a3a3a; line-height:1.4;'>
+            <div class='market-summary-detail'>
                 Current price: <strong>${summary['current_price']:,.2f}</strong>
             </div>
         ''', unsafe_allow_html=True)
@@ -80,7 +80,7 @@ def render_market_summary(summary):
             dist_color = '#23a88e' if dist >= 0 else '#f14c4a'
 
             st.markdown(f'''
-                <div style='font-size:12px; color:#6b7280;'>Distance to Supertrend</div>
+                <div class='market-summary-label'>Distance to Supertrend</div>
                 <div style='font-size:17px; font-weight:600; color:{dist_color};'>
                     {dist:.2f}%
                 </div>

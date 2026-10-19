@@ -75,7 +75,8 @@ class LightweightPriceChartTests(unittest.TestCase):
         ]:
             with self.subTest(label=label):
                 self.assertIn(label, CHART_LEGEND_HTML)
-        self.assertIn('border-top:2px dotted #9d601b', CHART_LEGEND_HTML)
+        self.assertIn('border-top:2px dotted #d49c4a', CHART_LEGEND_HTML)
+        self.assertIn('color:inherit', CHART_LEGEND_HTML)
 
     def test_html_embeds_chart_data_and_tradingview_attribution(self):
         html = build_lightweight_chart_html(self.data, self.halvings)
@@ -101,6 +102,13 @@ class LightweightPriceChartTests(unittest.TestCase):
         self.assertIn('const badgeLaneRightEdges = []', html)
         self.assertIn('const halvings = ', html)
         self.assertIn("createElementNS('http://www.w3.org/2000/svg', 'line')", html)
+        self.assertIn('function detectHostTheme()', html)
+        self.assertIn('background.match(/[\\d.]+/g)', html)
+        self.assertIn('function paletteForTheme(host)', html)
+        self.assertIn('background: host.background', html)
+        self.assertIn('function applyDocumentPalette(palette, dark)', html)
+        self.assertIn("window.parent.document.body.classList.toggle('btc-dark-theme', dark)", html)
+        self.assertIn('setInterval(syncChartTheme, 1000)', html)
         self.assertIn("line.setAttribute('stroke-dasharray', halving.projected ? '2 3' : '5 5')", html)
         self.assertIn('Halving 2024-01-01', html)
         self.assertIn('Charting by', html)
