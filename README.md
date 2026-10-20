@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/brand/banner-dark.jpg" alt="Banner" width="1000">
+  <img src="./assets/brand/banner-dark.png" alt="Banner" width="1000">
 </p>
 
 BIT (Bitcoin Investing Tool) is a Bitcoin analytics platform that combines an incremental ELT pipeline with a Streamlit application for market analysis and Supertrend-based strategy backtesting.
