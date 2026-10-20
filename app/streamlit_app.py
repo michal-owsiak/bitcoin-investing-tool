@@ -30,7 +30,7 @@ col_1, col_2, col_3 = st.columns([4, 0.2, 0.8])
 if st.session_state.get('chart_timeframe') not in {'1W', '1D'}:
     st.session_state['chart_timeframe'] = '1W'
 with col_1:
-    timeframe_col, title_col, spacer_col = st.columns([1, 4, 1])
+    timeframe_col, title_col, pi_cycle_col = st.columns([1.5, 3, 1.5])
     with timeframe_col:
         timeframe = st.segmented_control(
             label='Timeframe',
@@ -43,6 +43,12 @@ with col_1:
             f'<div style="padding-top:31px;text-align:center;font-family:Archivo,Arial,sans-serif;font-size:19px;font-weight:700;line-height:22px;">{CHART_TITLE}</div>',
             unsafe_allow_html=True,
         )
+    with pi_cycle_col:
+        show_pi_cycle = st.toggle(
+            'Pi Cycle Top Indicator',
+            key='show_pi_cycle_top',
+            help='Overlay the 111-day SMA and twice the 350-day SMA, calculated from daily closes.',
+        )
 
 price_df = get_price_data(timeframe)
 halvings_df = get_halvings_data()
@@ -52,9 +58,12 @@ whale_fig = build_whale_inflow_monitor(whales_df)
 summary = calculate_market_summary(price_df)
 
 backtest_trades = get_selected_backtest_trades(price_df, timeframe)
+pi_cycle_df = None
+if show_pi_cycle:
+    pi_cycle_df = price_df if timeframe == '1D' else get_price_data('1D')
 
 with col_1:
-    render_lightweight_price_chart(price_df, halvings_df, backtest_trades)
+    render_lightweight_price_chart(price_df, halvings_df, backtest_trades, pi_cycle_df)
     render_backtest_calculator(price_df, timeframe)
 
 with col_2:

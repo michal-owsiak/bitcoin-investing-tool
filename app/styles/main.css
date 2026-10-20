@@ -8,6 +8,57 @@
     font-family: 'Geist', sans-serif !important;
 }
 
+iframe[data-testid='stIFrame'] {
+    width: 100% !important;
+}
+
+:root {
+    --pi-cycle-111-color: #d97706;
+    --pi-cycle-350-color: #2e78a8;
+    --pi-cycle-signal-color: #d44850;
+    --pi-cycle-toggle-off: #e4474d;
+    --pi-cycle-toggle-on: #159b87;
+}
+
+body.btc-dark-theme {
+    --pi-cycle-111-color: #f2a15c;
+    --pi-cycle-350-color: #69b7d8;
+    --pi-cycle-signal-color: #f0807c;
+    --pi-cycle-toggle-off: #e4474d;
+    --pi-cycle-toggle-on: #35c6a0;
+}
+
+.st-key-show_pi_cycle_top [data-testid='stCheckbox'] {
+    transform: translate(17px, 22px);
+}
+
+.st-key-show_pi_cycle_top [data-testid='stCheckbox'] > label[data-baseweb='checkbox'] {
+    width: max-content !important;
+    margin-left: auto;
+}
+
+.st-key-show_pi_cycle_top label[data-baseweb='checkbox'] > div:first-child {
+    background-color: var(--pi-cycle-toggle-off) !important;
+    border-color: var(--pi-cycle-toggle-off) !important;
+}
+
+.st-key-show_pi_cycle_top label[data-baseweb='checkbox']:has(input[aria-checked='true']) > div:first-child {
+    background-color: var(--pi-cycle-toggle-on) !important;
+    border-color: var(--pi-cycle-toggle-on) !important;
+}
+
+.st-key-show_pi_cycle_top [data-testid='stMarkdownContainer'] p {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    transform: translateY(4px);
+    white-space: nowrap;
+}
+
+.st-key-show_pi_cycle_top [data-testid='stTooltipIcon'] {
+    transform: translateY(4px);
+}
+
 .block-container {
     padding-top: 2rem !important;
 }
@@ -54,7 +105,7 @@ h3#backtest-reward-calculator {
 
 .whale-top-inflows-heading span {
     color: inherit;
-    opacity: 0.75;
+    opacity: 0.85;
     font-size: 12px;
 }
 
@@ -62,13 +113,13 @@ h3#backtest-reward-calculator {
     color: inherit;
     font-size: 13px;
     line-height: 1.4;
-    opacity: 0.82;
+    opacity: 0.9;
 }
 
 .market-summary-label {
     color: inherit;
     font-size: 12px;
-    opacity: 0.72;
+    opacity: 0.82;
 }
 
 h4 {

@@ -48,6 +48,10 @@ reloads.
   - Helps identify long-term trend direction and potential reversal points
   - Used to explore historical market cycles and simulate signal-based investment strategies
 
+- **Pi Cycle Top Indicator (Optional)**
+  - Overlays the 111-day simple moving average and twice the 350-day simple moving average, calculated from daily BTC closes
+  - Marks historical upward crossovers as potential cycle-top signals; it is a historical risk indicator, not a price forecast or guarantee
+
 - **Backtest Reward Calculator**
   - Simulates an investment from a selected historical bullish flip on the chart's weekly or daily timeframe
   - Compares three strategies using existing Supertrend signals, without recalculating the indicator

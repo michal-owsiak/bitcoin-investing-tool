@@ -5,8 +5,11 @@ import pandas as pd
 from app.charts.lightweight_price_chart import (
     CHART_LEGEND_HTML,
     CHART_TITLE,
+    PI_CYCLE_LEGEND_HTML,
+    _chart_legend_html,
     _chart_data,
     _backtest_marker_data,
+    _pi_cycle_series,
     _timeline_times,
     _trend_series_segments,
     build_lightweight_chart_html,
@@ -68,6 +71,46 @@ class LightweightPriceChartTests(unittest.TestCase):
             {'time': candles[1]['time'], 'side': 'SELL'},
         ])
 
+    def test_pi_cycle_uses_daily_sma_and_aligns_to_candle_close(self):
+        daily_times = pd.date_range('2020-01-01', periods=400, tz='UTC')
+        daily = pd.DataFrame({
+            'OPEN_TIME': daily_times,
+            'CLOSE': range(1, 401),
+        })
+        chart_candles = [
+            {
+                'time': int(daily_times[index].timestamp()),
+                'closeTime': int(daily_times[index].timestamp()),
+            }
+            for index in [108, 349, 399]
+        ]
+
+        series = _pi_cycle_series(daily, chart_candles)
+
+        self.assertEqual(series[0]['ma111'], None)
+        self.assertEqual(series[0]['ma350x2'], None)
+        self.assertEqual(series[1]['ma111'], 295.0)
+        self.assertEqual(series[1]['ma350x2'], 351.0)
+        self.assertFalse(series[1]['piTop'])
+        self.assertEqual(series[2]['ma111'], 345.0)
+        self.assertEqual(series[2]['ma350x2'], 451.0)
+
+    def test_pi_cycle_top_signal_is_detected_from_daily_cross(self):
+        daily_times = pd.date_range('2020-01-01', periods=400, tz='UTC')
+        daily = pd.DataFrame({
+            'OPEN_TIME': daily_times,
+            'CLOSE': [1.0] * 350 + [10.0] * 50,
+        })
+        chart_candles = [{
+            'time': int(daily_times[index].timestamp()),
+            'closeTime': int(daily_times[index].timestamp()),
+        } for index in [349, 399]]
+
+        series = _pi_cycle_series(daily, chart_candles)
+
+        self.assertFalse(series[0]['piTop'])
+        self.assertTrue(series[1]['piTop'])
+
     def test_chart_legend_explains_flip_trade_and_halving_markers(self):
         for label in [
             'Bullish flip', 'Bearish flip', 'Selected strategy buy',
@@ -77,6 +120,18 @@ class LightweightPriceChartTests(unittest.TestCase):
                 self.assertIn(label, CHART_LEGEND_HTML)
         self.assertIn('border-top:2px dotted #d49c4a', CHART_LEGEND_HTML)
         self.assertIn('color:inherit', CHART_LEGEND_HTML)
+        self.assertIn('Pi Cycle Top', PI_CYCLE_LEGEND_HTML)
+        self.assertEqual(PI_CYCLE_LEGEND_HTML.count('font:inherit;line-height:inherit'), 4)
+        self.assertIn('width:8px;height:8px;background:var(--pi-cycle-signal-color', PI_CYCLE_LEGEND_HTML)
+
+    def test_pi_cycle_legend_items_stay_inline_with_base_legend(self):
+        legend = _chart_legend_html(True)
+
+        self.assertIn('111DMA', legend)
+        self.assertIn('350DMA x 2', legend)
+        self.assertIn('Pi Cycle Top', legend)
+        self.assertNotIn('<p>', legend)
+        self.assertEqual(legend.count('<div role="group"'), 1)
 
     def test_html_embeds_chart_data_and_tradingview_attribution(self):
         html = build_lightweight_chart_html(self.data, self.halvings)
@@ -85,7 +140,7 @@ class LightweightPriceChartTests(unittest.TestCase):
         self.assertEqual(CHART_TITLE, 'BTC Price (USDT) with Supertrend')
         self.assertNotIn('chart-title', html)
         self.assertIn('Candle close: ', html)
-        self.assertIn("const priceLabels = ['Open', 'High', 'Low', 'Close', 'Supertrend']", html)
+        self.assertIn("const priceLabels = ['Open', 'High', 'Low', 'Close', 'Supertrend', '111DMA', '350DMA x 2']", html)
         self.assertIn("+ ' USDT'", html)
         self.assertNotIn("'$' + Number(value)", html)
         self.assertIn("row.bullFlip ? 'Bullish flip'", html)
@@ -96,6 +151,20 @@ class LightweightPriceChartTests(unittest.TestCase):
         self.assertIn('#tooltip-values { display: flex; flex-direction: column;', html)
         self.assertIn('tooltip.style.top', html)
         self.assertIn('const tradeMarkers = []', html)
+        self.assertIn('const piCycleSeries = []', html)
+        self.assertIn('color: palette.piCycle111', html)
+        self.assertIn('color: palette.piCycle350', html)
+        self.assertIn('color: palette.piCycle111, lineWidth: 1', html)
+        self.assertIn('color: palette.piCycle350, lineWidth: 1', html)
+        self.assertIn("piCycleSignal: 'rgba(212,72,80,.98)'", html)
+        self.assertIn("piCycleSignal: 'rgba(240,128,124,.98)'", html)
+        self.assertIn('if (!signal.piTop) continue', html)
+        self.assertIn('const index = timeToLogical(signal.time);\n      if (index === null) continue;', html)
+        self.assertIn("line.setAttribute('stroke-dasharray', '2 4')", html)
+        self.assertIn("line.setAttribute('y1', 58)", html)
+        self.assertIn("marker.setAttribute('width', '8')", html)
+        self.assertIn("label.textContent = 'Pi Cycle Top'", html)
+        self.assertIn('label.setAttribute(\'fill\', palette.piCycleSignal)', html)
         self.assertIn("label.textContent = event.side", html)
         self.assertIn("label.setAttribute('font-weight', '600')", html)
         self.assertIn("label.setAttribute('font-size', '9')", html)
@@ -109,6 +178,8 @@ class LightweightPriceChartTests(unittest.TestCase):
         self.assertIn('function applyDocumentPalette(palette, dark)', html)
         self.assertIn("window.parent.document.body.classList.toggle('btc-dark-theme', dark)", html)
         self.assertIn('setInterval(syncChartTheme, 1000)', html)
+        self.assertIn('const chartResizeObserver = new ResizeObserver(syncChartSize)', html)
+        self.assertIn('requestAnimationFrame(syncChartSize)', html)
         self.assertIn("line.setAttribute('stroke-dasharray', halving.projected ? '2 3' : '5 5')", html)
         self.assertIn('Halving 2024-01-01', html)
         self.assertIn('Charting by', html)

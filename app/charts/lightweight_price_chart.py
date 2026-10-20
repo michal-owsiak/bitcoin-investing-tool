@@ -17,7 +17,15 @@ CHART_LEGEND_HTML = '''
   <span style="display:inline-flex;align-items:center;gap:5px;"><span style="padding:2px 5px;border-radius:3px;background:#e4474d;color:#fff;font-size:9px;">SELL</span>Selected strategy sell</span>
   <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:14px;border-top:1px dashed currentColor;"></span>Halving</span>
   <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:14px;border-top:2px dotted #d49c4a;"></span>Expected halving</span>
+  __PI_CYCLE_LEGEND__
 </div>
+'''
+PI_CYCLE_LEGEND_HTML = '''
+<span style="display:inline-flex;align-items:center;gap:16px;white-space:nowrap;font:inherit;line-height:inherit;">
+<span style="display:inline-flex;align-items:center;gap:5px;font:inherit;line-height:inherit;"><span style="width:14px;border-top:2px solid var(--pi-cycle-111-color,#d97706);"></span>111DMA</span>
+<span style="display:inline-flex;align-items:center;gap:5px;font:inherit;line-height:inherit;"><span style="width:14px;border-top:2px solid var(--pi-cycle-350-color,#2e78a8);"></span>350DMA x 2</span>
+<span style="display:inline-flex;align-items:center;gap:5px;font:inherit;line-height:inherit;"><span style="width:8px;height:8px;background:var(--pi-cycle-signal-color,#bd6661);border-radius:1px;"></span>Pi Cycle Top</span>
+</span>
 '''
 
 
@@ -60,6 +68,7 @@ def _chart_data(price_df, halvings_df):
         timestamp = int(row.OPEN_TIME.timestamp())
         candles.append({
             'time': timestamp,
+            'closeTime': int(row.CLOSE_TIME.timestamp()),
             'open': float(row.OPEN),
             'high': float(row.HIGH),
             'low': float(row.LOW),
@@ -148,6 +157,58 @@ def _timeline_times(candles, halvings):
     return sorted(times)
 
 
+def _pi_cycle_series(daily_price_df, chart_candles):
+    required = {'OPEN_TIME', 'CLOSE'}
+    if (
+        daily_price_df is None
+        or daily_price_df.empty
+        or not required.issubset(daily_price_df.columns)
+        or not chart_candles
+    ):
+        return []
+
+    daily = daily_price_df[['OPEN_TIME', 'CLOSE']].copy()
+    daily['OPEN_TIME'] = pd.to_datetime(daily['OPEN_TIME'], errors='coerce', utc=True)
+    daily['CLOSE'] = pd.to_numeric(daily['CLOSE'], errors='coerce')
+    daily = (
+        daily.dropna(subset=['OPEN_TIME', 'CLOSE'])
+        .sort_values('OPEN_TIME')
+        .drop_duplicates(subset=['OPEN_TIME'])
+        .reset_index(drop=True)
+    )
+    if daily.empty:
+        return []
+
+    daily['MA_111'] = daily['CLOSE'].rolling(111, min_periods=111).mean()
+    daily['MA_350_X2'] = daily['CLOSE'].rolling(350, min_periods=350).mean() * 2
+    daily['PI_TOP_COUNT'] = (
+      (daily['MA_111'] > daily['MA_350_X2'])
+      & (daily['MA_111'].shift(1) <= daily['MA_350_X2'].shift(1))
+    ).fillna(False).astype(int).cumsum()
+    target_times = pd.DataFrame({
+        'time': [candle['time'] for candle in chart_candles],
+        'target_time': pd.to_datetime(
+          [candle.get('closeTime', candle['time']) for candle in chart_candles],
+          unit='s', utc=True,
+        ),
+    })
+    aligned = pd.merge_asof(
+        target_times.sort_values('target_time'),
+        daily,
+        left_on='target_time',
+        right_on='OPEN_TIME',
+        direction='backward',
+    )
+    signal_counts = aligned['PI_TOP_COUNT'].fillna(0).astype(int)
+    aligned['piTop'] = signal_counts.diff().fillna(signal_counts).gt(0)
+    return [{
+        'time': int(row.time),
+        'ma111': float(row.MA_111) if pd.notna(row.MA_111) else None,
+        'ma350x2': float(row.MA_350_X2) if pd.notna(row.MA_350_X2) else None,
+        'piTop': bool(row.piTop),
+    } for row in aligned.itertuples(index=False)]
+
+
 def _backtest_marker_data(candles, trades):
     time_by_close_date = {candle['closeDate']: candle['time'] for candle in candles}
     markers = []
@@ -160,6 +221,13 @@ def _backtest_marker_data(candles, trades):
             if time is not None:
                 markers.append({'time': time, 'side': side})
     return markers
+
+
+def _chart_legend_html(pi_cycle_enabled):
+    pi_cycle_legend = ''
+    if pi_cycle_enabled:
+        pi_cycle_legend = PI_CYCLE_LEGEND_HTML.replace('\\n', '').strip()
+    return CHART_LEGEND_HTML.replace('__PI_CYCLE_LEGEND__', pi_cycle_legend)
 
 
 HTML_TEMPLATE = r'''<!doctype html>
@@ -201,10 +269,12 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
   const candles = __CANDLE_DATA__;
   const halvings = __HALVING_DATA__;
   const tradeMarkers = __TRADE_MARKER_DATA__;
+  const piCycleSeries = __PI_CYCLE_SERIES__;
   const timelineTimes = __TIMELINE_DATA__;
   const bullishSegments = __BULLISH_SEGMENTS__;
   const bearishSegments = __BEARISH_SEGMENTS__;
   const rowsByTime = new Map(candles.map(row => [row.time, row]));
+  const piCycleByTime = new Map(piCycleSeries.map(row => [row.time, row]));
   const container = document.getElementById('chart');
   const tooltip = document.getElementById('tooltip');
   const tooltipDate = document.getElementById('tooltip-date');
@@ -256,6 +326,7 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
       bullishFill: 'rgba(21,155,135,.2)', bearishFill: 'rgba(228,71,77,.2)',
       historicalLine: 'rgba(174,187,201,.82)', historicalLabel: '#b6c1ce',
       expectedLine: 'rgba(224,169,85,.98)', expectedLabel: '#e0a955',
+      piCycle111: '#f2a15c', piCycle350: '#69b7d8', piCycleSignal: 'rgba(240,128,124,.98)',
     } : {
       background: host.background, foreground: host.foreground || '#3e4144', muted: '#6b7280',
       grid: 'rgba(62,65,68,.07)', border: 'rgba(62,65,68,.18)',
@@ -263,6 +334,7 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
       bullishFill: 'rgba(21,155,135,.13)', bearishFill: 'rgba(228,71,77,.13)',
       historicalLine: 'rgba(82,96,112,.88)', historicalLabel: '#526070',
       expectedLine: 'rgba(157,96,27,.92)', expectedLabel: '#9d601b',
+      piCycle111: '#d97706', piCycle350: '#2e78a8', piCycleSignal: 'rgba(212,72,80,.98)',
     };
   }
 
@@ -331,6 +403,27 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
       });
       trendSeries.setData(segment);
     }
+  }
+
+  const ma111Data = piCycleSeries
+    .filter(row => row.ma111 !== null)
+    .map(row => ({time: row.time, value: row.ma111}));
+  const ma350x2Data = piCycleSeries
+    .filter(row => row.ma350x2 !== null)
+    .map(row => ({time: row.time, value: row.ma350x2}));
+  if (ma111Data.length) {
+    const ma111Series = chart.addLineSeries({
+      color: palette.piCycle111, lineWidth: 1, priceLineVisible: false,
+      lastValueVisible: false, crosshairMarkerVisible: false,
+    });
+    ma111Series.setData(ma111Data);
+  }
+  if (ma350x2Data.length) {
+    const ma350x2Series = chart.addLineSeries({
+      color: palette.piCycle350, lineWidth: 1, priceLineVisible: false,
+      lastValueVisible: false, crosshairMarkerVisible: false,
+    });
+    ma350x2Series.setData(ma350x2Data);
   }
 
   const volumeSeries = chart.addHistogramSeries({
@@ -446,6 +539,40 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
       trendFill.appendChild(label);
     }
 
+    for (const signal of piCycleSeries) {
+      if (!signal.piTop) continue;
+      const index = timeToLogical(signal.time);
+      if (index === null) continue;
+      const x = chart.timeScale().logicalToCoordinate(index);
+      if (x === null) continue;
+      const labelOnLeft = x > trendFill.clientWidth - 105;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x);
+      line.setAttribute('x2', x);
+      line.setAttribute('y1', 58);
+      line.setAttribute('y2', trendFill.clientHeight - 1);
+      line.setAttribute('stroke', palette.piCycleSignal);
+      line.setAttribute('stroke-width', '1.5');
+      line.setAttribute('stroke-dasharray', '2 4');
+      trendFill.appendChild(line);
+      const marker = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      marker.setAttribute('x', x - 4);
+      marker.setAttribute('y', '47');
+      marker.setAttribute('width', '8');
+      marker.setAttribute('height', '8');
+      marker.setAttribute('fill', palette.piCycleSignal);
+      marker.setAttribute('rx', '1');
+      trendFill.appendChild(marker);
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', labelOnLeft ? x - 9 : x + 9);
+      label.setAttribute('y', '55');
+      label.setAttribute('text-anchor', labelOnLeft ? 'end' : 'start');
+      label.setAttribute('fill', palette.piCycleSignal);
+      label.setAttribute('font-size', '10');
+      label.textContent = 'Pi Cycle Top';
+      trendFill.appendChild(label);
+    }
+
     const badgeLaneRightEdges = [];
     for (const event of tradeMarkers) {
       const index = timeToLogical(event.time);
@@ -523,15 +650,26 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
     const row = rowsByTime.get(Number(param.time));
     if (!row) { tooltip.style.display = 'none'; return; }
     tooltipDate.textContent = 'Candle close: ' + row.closeDate;
-    tooltipValues.innerHTML = [
+    const values = [
       ['Open', row.open], ['High', row.high], ['Low', row.low], ['Close', row.close],
       ['Supertrend', row.supertrend],
       ['Trend', row.bullTrend ? 'Bullish' : row.bearTrend ? 'Bearish' : 'N/A'],
       ['Signal', row.bullFlip ? 'Bullish flip' : row.bearFlip ? 'Bearish flip' : null],
       ['Volume', row.volume],
-    ].map(([label, value]) => {
+    ];
+    const piCycleRow = piCycleByTime.get(Number(param.time));
+    if (piCycleRow?.ma111 !== null && piCycleRow?.ma111 !== undefined) {
+      values.push(['111DMA', piCycleRow.ma111]);
+    }
+    if (piCycleRow?.ma350x2 !== null && piCycleRow?.ma350x2 !== undefined) {
+      values.push(['350DMA x 2', piCycleRow.ma350x2]);
+    }
+    if (piCycleRow?.piTop) {
+      values.push(['Pi Cycle Top', '111DMA crossed above 350DMA x 2']);
+    }
+    tooltipValues.innerHTML = values.map(([label, value]) => {
       if (value === null || value === undefined) return '';
-      const priceLabels = ['Open', 'High', 'Low', 'Close', 'Supertrend'];
+      const priceLabels = ['Open', 'High', 'Low', 'Close', 'Supertrend', '111DMA', '350DMA x 2'];
       const formatted = priceLabels.includes(label)
         ? Number(value).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USDT'
         : label === 'Volume'
@@ -574,11 +712,17 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
     });
   }
   drawTrendFill();
-  new ResizeObserver(entries => {
-    const box = entries[0].contentRect;
-    chart.applyOptions({width: Math.floor(box.width), height: Math.floor(box.height)});
+  const syncChartSize = () => {
+    const width = Math.floor(container.clientWidth);
+    const height = Math.floor(container.clientHeight);
+    if (!width || !height) return;
+    chart.applyOptions({width, height});
     scheduleTrendFill();
-  }).observe(container);
+  };
+  const chartResizeObserver = new ResizeObserver(syncChartSize);
+  chartResizeObserver.observe(container);
+  window.addEventListener('resize', syncChartSize, {passive: true});
+  requestAnimationFrame(syncChartSize);
 })();
 </script>
 </body>
@@ -594,16 +738,18 @@ def _script_json(value):
   )
 
 
-def build_lightweight_chart_html(price_df, halvings_df, backtest_trades=None):
+def build_lightweight_chart_html(price_df, halvings_df, backtest_trades=None, pi_cycle_df=None):
   candles, halvings = _chart_data(price_df, halvings_df)
   timeline = _timeline_times(candles, halvings)
   trade_markers = _backtest_marker_data(candles, backtest_trades)
+  pi_cycle_series = _pi_cycle_series(pi_cycle_df, candles)
   replacements = {
     '__CHART_LIBRARY_URL__': CHART_LIBRARY_URL,
     '__CHART_HEIGHT__': str(CHART_HEIGHT),
     '__CANDLE_DATA__': _script_json(candles),
     '__HALVING_DATA__': _script_json(halvings),
     '__TRADE_MARKER_DATA__': _script_json(trade_markers),
+    '__PI_CYCLE_SERIES__': _script_json(pi_cycle_series),
     '__TIMELINE_DATA__': _script_json(timeline),
     '__BULLISH_SEGMENTS__': _script_json(_trend_series_segments(candles, 'bullTrend')),
     '__BEARISH_SEGMENTS__': _script_json(_trend_series_segments(candles, 'bearTrend')),
@@ -614,10 +760,10 @@ def build_lightweight_chart_html(price_df, halvings_df, backtest_trades=None):
   return html
 
 
-def render_lightweight_price_chart(price_df, halvings_df, backtest_trades=None):
+def render_lightweight_price_chart(price_df, halvings_df, backtest_trades=None, pi_cycle_df=None):
     import streamlit as st
     import streamlit.components.v1 as components
 
-    html = build_lightweight_chart_html(price_df, halvings_df, backtest_trades)
-    st.markdown(CHART_LEGEND_HTML, unsafe_allow_html=True)
+    html = build_lightweight_chart_html(price_df, halvings_df, backtest_trades, pi_cycle_df)
+    st.markdown(_chart_legend_html(pi_cycle_df is not None), unsafe_allow_html=True)
     components.html(html, height=CHART_HEIGHT + 18, scrolling=False)
