@@ -25,11 +25,10 @@ def build_whale_inflow_monitor(whales_df: pd.DataFrame) -> go.Figure:
             text=[f'{x/1000:.1f}k' for x in df['total_output_value']],
             textposition='inside',
             insidetextanchor='middle',
-            customdata=df[['output_address', 'transaction_count']],
+            customdata=df[['transaction_count']],
             hovertemplate=(
-                'Address: %{customdata[0]}<br>'
                 'BTC Inflow: %{x:,.4f}<br>'
-                'Transactions: %{customdata[1]}'
+                'Transactions: %{customdata[0]}'
                 '<extra></extra>'
             )
         )

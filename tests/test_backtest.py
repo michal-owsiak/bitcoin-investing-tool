@@ -28,7 +28,23 @@ class BacktestTests(unittest.TestCase):
         self.assertEqual(result['closed_trades'], 0)
         self.assertEqual(result['trades'][0]['trade_return_pct'], 150)
         self.assertEqual(result['trades'][0]['cumulative_return_pct'], result['return_pct'])
+        self.assertIsNone(result['annualized_return_pct'])
         self.assertTrue(result['position_open'])
+
+    def test_annualized_return_uses_elapsed_years(self):
+        data = pd.DataFrame({
+            'OPEN_TIME': pd.to_datetime(['2020-01-01', '2021-12-31'], utc=True),
+            'CLOSE_TIME': pd.to_datetime(['2020-01-02', '2022-01-01'], utc=True),
+            'CLOSE': [100.0, 200.0],
+            'SIGNAL_FLIP_UP': [True, False],
+            'SIGNAL_FLIP_DOWN': [False, False],
+        })
+
+        result = self.calculate('Hold until today', '2020-01-02', data)
+        elapsed_days = (result['latest_date'] - result['entry_date']).total_seconds() / 86400
+        expected = (2 ** (365.2425 / elapsed_days) - 1) * 100
+
+        self.assertAlmostEqual(result['annualized_return_pct'], expected)
 
     def test_exit_uses_first_subsequent_bearish_flip(self):
         result = self.calculate('Exit on next bearish flip')

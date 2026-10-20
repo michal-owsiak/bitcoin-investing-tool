@@ -1,16 +1,23 @@
-## **Bitcoin Investing Tool**
+<p align="center">
+  <img src="./assets/brand/banner-dark.png" alt="Banner" width="1000">
+</p>
 
-An end-to-end Bitcoin analytics project combining an incremental ELT pipeline with a deployed Streamlit application for long-term market analysis.
+<p align="center">
+  <code>Snowflake</code> · <code>dbt</code> · <code>Airflow</code> · <code>Docker</code> · <code>Streamlit</code>
+</p>
+<br/>
 
-https://bitcoin-investing-tool.com
+BIT (Bitcoin Investing Tool) is a Bitcoin analytics platform that combines an incremental ELT pipeline with a Streamlit application for market analysis and Supertrend-based strategy backtesting.
+<br/>
+<br/>
+<p align="center">
+  <a href="https://bitcoin-investing-tool.com"><strong>Live App →</strong></a>
+</p>
 
-`Snowflake` · `dbt` · `Airflow` · `Docker` · `Streamlit`
-
-------------------------------------------------------------------------
 
 ## **Architecture**
 
-![Architecture](./architecture.jpg)
+![Architecture](./assets/diagrams/architecture.jpg)
 
 ------------------------------------------------------------------------
 
@@ -34,7 +41,7 @@ reloads.
 ------------------------------------------------------------------------
 ## **Application**
 
-![Application](./app_screenshot.jpg)
+![Application](./assets/screenshots/app_screenshot.jpg)
 
 ### **Key Components**
 
@@ -47,6 +54,10 @@ reloads.
   - Primary analytical tool used in the application
   - Helps identify long-term trend direction and potential reversal points
   - Used to explore historical market cycles and simulate signal-based investment strategies
+
+- **Pi Cycle Top Indicator (Optional)**
+  - Overlays the 111-day simple moving average and twice the 350-day simple moving average, calculated from daily BTC closes
+  - Marks historical upward crossovers as potential cycle-top signals; it is a historical risk indicator, not a price forecast or guarantee
 
 - **Backtest Reward Calculator**
   - Simulates an investment from a selected historical bullish flip on the chart's weekly or daily timeframe
@@ -236,6 +247,11 @@ bitcoin-investing-tool/
 │   ├── services/                # Data access layer (Snowflake)
 │   ├── styles/                  # Styling (CSS)
 │   └── streamlit_app.py         # Entry point
+│
+├── assets/                    # Shared visual assets
+│   ├── brand/                 # Application icons
+│   ├── diagrams/              # Architecture diagrams
+│   └── screenshots/           # Application screenshots
 │
 ├── shared/                    # Shared utilities (Snowflake client)
 │

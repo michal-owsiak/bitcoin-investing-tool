@@ -12,6 +12,7 @@ STRATEGY_DESCRIPTIONS = {
     'Exit on next bearish flip': 'Buy at the selected bullish flip and sell at the first subsequent bearish flip.',
     'Follow all signals': 'Sell on bearish flips and reinvest all proceeds on subsequent bullish flips.',
 }
+DEFAULT_BACKTEST_ENTRY_DATE = '2020-08-02'
 
 
 def parse_investment(value):
@@ -42,6 +43,41 @@ def change_investment(amount):
         st.session_state['backtest_investment_text'] = f'{investment:,.2f}'
 
 
+def _default_entry_index(entry_options):
+    preferred_index = next((
+        index for index, entry_date in enumerate(entry_options)
+        if pd.Timestamp(entry_date).strftime('%Y-%m-%d') == DEFAULT_BACKTEST_ENTRY_DATE
+    ), None)
+    return preferred_index if preferred_index is not None else max(0, len(entry_options) - 1)
+
+
+def get_selected_backtest_trades(price_df, timeframe):
+    try:
+        data = prepare_backtest_data(price_df)
+    except ValueError:
+        return []
+
+    bullish = data[data['SIGNAL_FLIP_UP']].sort_values('CLOSE_TIME', ascending=False)
+    if bullish.empty:
+        return []
+
+    entry_options = bullish['CLOSE_TIME'].map(lambda date: date.isoformat()).tolist()
+    default_entry = entry_options[_default_entry_index(entry_options)]
+    entry_key = f'backtest_entry_v2_{timeframe}'
+    entry_date = st.session_state.get(entry_key, default_entry)
+    if entry_date not in entry_options:
+        entry_date = default_entry
+    strategy = st.session_state.get('backtest_strategy', STRATEGIES[0])
+    investment_text = st.session_state.get('backtest_investment_text', '1,000.00')
+
+    try:
+        investment = parse_investment(investment_text)
+        result = calculate_backtest(data, entry_date, investment, strategy)
+    except ValueError:
+        return []
+    return result['trades']
+
+
 def render_backtest_calculator(price_df, timeframe):
     st.subheader('Backtest Reward Calculator')
     st.caption('Simulate an investment from a historical Supertrend bullish flip.')
@@ -62,9 +98,11 @@ def render_backtest_calculator(price_df, timeframe):
         entry_date = st.selectbox(
             'Bullish flip date',
             options=bullish['CLOSE_TIME'].map(lambda date: date.isoformat()).tolist(),
-            index=len(bullish) - 1,
+            index=_default_entry_index(
+                bullish['CLOSE_TIME'].map(lambda date: date.isoformat()).tolist()
+            ),
             format_func=lambda date: pd.Timestamp(date).strftime('%Y-%m-%d'),
-            key=f'backtest_entry_{timeframe}',
+            key=f'backtest_entry_v2_{timeframe}',
         )
     with amount_col:
         with st.container(key='backtest_investment_control'):
@@ -106,8 +144,13 @@ def render_backtest_calculator(price_df, timeframe):
     if result['awaiting_exit']:
         st.info('No subsequent bearish flip yet. The position is open; its value below uses the latest available close, not a completed sale.')
 
-    value_col, profit_col, return_col = st.columns(3)
+    value_col, profit_col, return_col, cagr_col = st.columns(4)
     value_col.metric('Portfolio value (USDT)', f"{result['final_value']:,.2f}")
+    cagr = result['annualized_return_pct']
+    cagr_col.metric(
+        'Annualized return (CAGR)',
+        f'{cagr:+,.2f}%' if cagr is not None else 'N/A (<1Y)',
+    )
     for column, label, value, suffix in [
         (profit_col, 'Profit / loss (USDT)', result['profit'], ''),
         (return_col, 'Return', result['return_pct'], '%'),
