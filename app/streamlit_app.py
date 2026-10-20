@@ -57,7 +57,6 @@ with col_1:
         timeframe = st.segmented_control(
             label='Timeframe',
             options=['1W', '1D'],
-            default='1W',
             key='chart_timeframe',
         )
     with title_col:
