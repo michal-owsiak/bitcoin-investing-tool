@@ -1,14 +1,18 @@
 <p align="center">
   <img src="./assets/brand/banner-dark.png" alt="Banner" width="1000">
 </p>
+<br/>
+<p align="center">
+  <code>Snowflake</code> · <code>dbt</code> · <code>Airflow</code> · <code>Docker</code> · <code>Streamlit</code>
+</p>
+<br/>
 
 BIT (Bitcoin Investing Tool) is a Bitcoin analytics platform that combines an incremental ELT pipeline with a Streamlit application for market analysis and Supertrend-based strategy backtesting.
+<br/>
+<p align="center">
+  <a href="https://bitcoin-investing-tool.com"><strong>Live App →</strong></a>
+</p>
 
-https://bitcoin-investing-tool.com
-
-`Snowflake` · `dbt` · `Airflow` · `Docker` · `Streamlit`
-
-------------------------------------------------------------------------
 
 ## **Architecture**
 
