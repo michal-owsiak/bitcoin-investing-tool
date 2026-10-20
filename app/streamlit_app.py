@@ -105,7 +105,7 @@ with col_3:
 
     st.markdown(
         "<div class='whale-top-inflows-heading'>"
-        "<h4>Top Whale Inflows (hourly)</h4>"
+        "<h4>Top Whale Inflows (daily)</h4>"
         '</div>',
         unsafe_allow_html=True
     )
