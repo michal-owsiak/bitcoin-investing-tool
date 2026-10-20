@@ -18,13 +18,35 @@ from components.dashboard_sections import (
     render_market_summary
 )
 
-st.set_page_config(page_title='Bitcoin Investing Tool', layout='wide')
+st.set_page_config(
+    page_title='BIT — Bitcoin Investing Tool',
+    page_icon=str(Path(__file__).resolve().parents[1] / 'assets' / 'brand' / 'icon.png'),
+    layout='wide',
+)
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 load_css('../styles/main.css')
 
 
-st.title('Bitcoin Investing Tool')
+st.markdown("""
+<h1 class="bit-title">
+    BIT <span class="bit-dash">——</span> Bitcoin Investing Tool
+</h1>
+
+<style>
+.bit-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.bit-dash {
+    background: linear-gradient(90deg, #e4474d, #159b87);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 col_1, col_2, col_3 = st.columns([4, 0.2, 0.8])
 if st.session_state.get('chart_timeframe') not in {'1W', '1D'}:
@@ -98,7 +120,7 @@ render_market_summary(summary)
 st.markdown(
     '''
         <div class='footer'>
-            © 2026 Michał Owsiak - Bitcoin Investing Tool
+            © 2026 Michał Owsiak | BIT
         </div>
     ''',
     unsafe_allow_html=True

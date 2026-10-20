@@ -66,9 +66,10 @@ body.btc-dark-theme {
 h1 {
     font-family: 'Archivo', sans-serif !important;
     letter-spacing: -2px;
-    font-size: 36px !important;
+    font-size: 38px !important;
     font-weight: 800 !important;
     padding-bottom: 2rem !important;
+    padding-top: 6px !important;
 }
 
 h3 {
@@ -245,4 +246,6 @@ body.btc-dark-theme [data-testid="stMetricValue"] * {
     color: inherit;
     opacity: 0.55;
     pointer-events: none;
+    padding-bottom: 16px;
+    padding-right: 16px;
 }
