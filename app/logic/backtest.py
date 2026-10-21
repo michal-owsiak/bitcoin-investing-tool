@@ -4,6 +4,7 @@ import pandas as pd
 
 
 STRATEGIES = (
+    'Follow signals, never sell at a loss',
     'Follow all signals',
     'Hold until today',
     'Exit on next bearish flip',
@@ -68,7 +69,11 @@ def calculate_backtest(price_df, entry_date, investment, strategy):
         subsequent = subsequent.iloc[:0]
 
     for _, candle in subsequent.iterrows():
-        if btc > 0 and candle['SIGNAL_FLIP_DOWN']:
+        sell_blocked = (
+            strategy == 'Follow signals, never sell at a loss'
+            and float(candle['CLOSE']) < float(current_entry['CLOSE'])
+        )
+        if btc > 0 and candle['SIGNAL_FLIP_DOWN'] and not sell_blocked:
             cash = btc * float(candle['CLOSE'])
             trades.append({
                 'entry_date': current_entry['CLOSE_TIME'],

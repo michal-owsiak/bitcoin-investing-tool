@@ -73,13 +73,14 @@ class BacktestUITests(unittest.TestCase):
         self.assertFalse(app.exception)
         self.assertEqual(app.metric[0].value, '3,600.00')
 
-    def test_strategy_order_and_follow_all_signals_default(self):
+    def test_strategy_order_and_never_sell_at_loss_default(self):
         app = self.app(latest_entry=False)
         strategy = app.selectbox(key='backtest_strategy')
         self.assertEqual(strategy.options, [
-            'Follow all signals', 'Hold until today', 'Exit on next bearish flip',
+            'Follow signals, never sell at a loss', 'Follow all signals',
+            'Hold until today', 'Exit on next bearish flip',
         ])
-        self.assertEqual(strategy.value, 'Follow all signals')
+        self.assertEqual(strategy.value, 'Follow signals, never sell at a loss')
         self.assertEqual(app.selectbox(key='backtest_entry_v2_1W').value, '2024-01-02T00:00:00+00:00')
         self.assertFalse(app.exception)
         self.assertEqual(app.metric[0].value, '2,250.00')

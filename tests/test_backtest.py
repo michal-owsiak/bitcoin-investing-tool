@@ -94,6 +94,23 @@ class BacktestTests(unittest.TestCase):
         self.assertEqual([trade['cumulative_return_pct'] for trade in result['trades']], [-50, 0, -50])
         self.assertEqual(result['trades'][-1]['cumulative_return_pct'], result['return_pct'])
 
+    def test_never_sell_at_loss_holds_through_losing_bearish_flips(self):
+        data = self.data.copy()
+        data['CLOSE'] = [100., 50., 80., 200., 150., 300.]
+        result = self.calculate('Follow signals, never sell at a loss', data=data)
+        self.assertEqual(result['closed_trades'], 1)
+        self.assertEqual(result['trades'][0]['exit_date'], pd.Timestamp('2024-01-05', tz='UTC'))
+        self.assertEqual(result['trades'][0]['exit_price'], 200)
+        self.assertEqual(result['trades'][1]['entry_price'], 150)
+        self.assertEqual(result['final_value'], 4000)
+        self.assertTrue(result['position_open'])
+
+    def test_never_sell_at_loss_matches_follow_when_every_exit_is_profitable(self):
+        self.assertEqual(
+            self.calculate('Follow signals, never sell at a loss')['trades'],
+            self.calculate('Follow all signals')['trades'],
+        )
+
     def test_only_selected_entry_and_later_signals_are_used(self):
         result = self.calculate('Follow all signals', '2024-01-04')
         self.assertAlmostEqual(result['final_value'], 2500)
