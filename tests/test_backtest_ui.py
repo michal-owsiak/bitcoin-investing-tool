@@ -12,10 +12,10 @@ import sys
 sys.path.insert(0, {APP_PATH!r})
 import pandas as pd
 import streamlit as st
-from components.backtest_calculator import (
+from components.strategy_simulatorimport (
     _default_entry_index,
     get_selected_backtest_trades,
-    render_backtest_calculator,
+    render_strategy_simulator,
 )
 
 timeframe = st.selectbox('Timeframe', ['1W', '1D'], key='test_timeframe')
@@ -32,7 +32,7 @@ selected_trades = get_selected_backtest_trades(data, timeframe)
 st.session_state['chart_trade_count'] = len(selected_trades)
 chart_col, spacer_col, whale_col = st.columns([4, 0.2, 0.8])
 with chart_col:
-    render_backtest_calculator(data, timeframe)
+    render_strategy_simulator(data, timeframe)
 '''
 
 
@@ -350,8 +350,8 @@ render_market_summary({
 
     def test_no_bullish_flips(self):
         app = AppTest.from_string(APP.replace(
-            "render_backtest_calculator(data, timeframe)",
-            "data['SIGNAL_FLIP_UP'] = False\nrender_backtest_calculator(data, timeframe)",
+            "render_strategy_simulator(data, timeframe)",
+            "data['SIGNAL_FLIP_UP'] = False\nrender_strategy_simulator(data, timeframe)",
         )).run()
         self.assertFalse(app.exception)
         self.assertIn('No bullish flips', app.info[0].value)
@@ -359,8 +359,8 @@ render_market_summary({
 
     def test_empty_data(self):
         app = AppTest.from_string(APP.replace(
-            'render_backtest_calculator(data, timeframe)',
-            'render_backtest_calculator(data.iloc[:0], timeframe)',
+            'render_strategy_simulator(data, timeframe)',
+            'render_strategy_simulator(data.iloc[:0], timeframe)',
         )).run()
         self.assertFalse(app.exception)
         self.assertIn('No price data', app.info[0].value)

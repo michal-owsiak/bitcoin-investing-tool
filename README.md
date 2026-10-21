@@ -55,23 +55,24 @@ reloads.
   - Helps identify long-term trend direction and potential reversal points
   - Used to explore historical market cycles and simulate signal-based investment strategies
 
-- **Pi Cycle Top Indicator (Optional)**
-  - Overlays the 111-day simple moving average and twice the 350-day simple moving average, calculated from daily BTC closes
-  - Marks historical upward crossovers as potential cycle-top signals; it is a historical risk indicator, not a price forecast or guarantee
-
-- **Backtest Reward Calculator**
+- **Supertrend Strategy Simulator**
   - Simulates an investment from a selected historical bullish flip on the chart's weekly or daily timeframe
   - Compares three strategies using existing Supertrend signals, without recalculating the indicator
   - Shows portfolio value, profit/loss, percentage return, and individual trade details
 
-- **Market Summary**
-  - Aggregated view of market metrics
-  - Provides quick situational awareness for the current market state
+- **Pi Cycle Top Indicator (Optional)**
+  - Overlays the 111-day simple moving average and twice the 350-day simple moving average, calculated from daily BTC closes
+  - Marks historical upward crossovers as potential cycle-top signals; it is a historical risk indicator, not a price forecast or guarantee
 
 - **Whale Inflow Monitoring**
   - Tracks large-volume movements on the blockchain
   - Based on on-chain data
   - Uses the latest available on-chain data to monitor large BTC inflows
+
+- **Market Summary**
+  - Aggregated view of market metrics
+  - Provides quick situational awareness for the current market state
+
 
 ### **Backtest Strategies**
 

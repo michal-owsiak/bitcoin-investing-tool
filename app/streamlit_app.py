@@ -8,9 +8,9 @@ from services.data_loader import (
     get_whale_inflow_data,
 )
 from logic.market_summary import calculate_market_summary
-from components.backtest_calculator import (
+from components.strategy_simulator import (
     get_selected_backtest_trades,
-    render_backtest_calculator,
+    render_strategy_simulator,
 )
 from charts import build_whale_inflow_monitor
 from charts.lightweight_price_chart import CHART_TITLE, render_lightweight_price_chart
@@ -85,7 +85,7 @@ if show_pi_cycle:
 
 with col_1:
     render_lightweight_price_chart(price_df, halvings_df, backtest_trades, pi_cycle_df)
-    render_backtest_calculator(price_df, timeframe)
+    render_strategy_simulator(price_df, timeframe)
 
 with col_2:
     st.write('')

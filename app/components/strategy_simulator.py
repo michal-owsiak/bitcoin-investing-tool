@@ -78,9 +78,9 @@ def get_selected_backtest_trades(price_df, timeframe):
     return result['trades']
 
 
-def render_backtest_calculator(price_df, timeframe):
-    st.subheader('Backtest Reward Calculator')
-    st.caption('Simulate an investment from a historical Supertrend bullish flip.')
+def render_strategy_simulator(price_df, timeframe):
+    st.subheader('Supertrend Strategy Simulator')
+    st.caption('Backtest an investment from a historical Supertrend bullish flip.')
 
     try:
         data = prepare_backtest_data(price_df)
@@ -211,6 +211,6 @@ def render_backtest_calculator(price_df, timeframe):
             st.dataframe(styled_trades, hide_index=True, use_container_width=True)
 
     st.caption(
-        "Trades are simulated at the signal candle's closing price (UTC). "
+        'Trades are simulated at the signal candle\'s closing price (UTC). '
         'Results exclude fees, slippage and taxes. Historical results do not predict future returns.'
     )
