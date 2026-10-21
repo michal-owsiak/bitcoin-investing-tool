@@ -12,6 +12,32 @@ iframe[data-testid='stIFrame'] {
     width: 100% !important;
 }
 
+/* Laptop widths: shrink the price chart to give the whale monitor column more room. */
+@media (min-width: 641px) and (max-width: 1800px) {
+    [data-testid='stHorizontalBlock']:has(.whale-monitor-heading) > [data-testid='stColumn']:nth-child(1) {
+        width: calc(73% - 1rem) !important;
+        flex: 1 1 calc(73% - 1rem) !important;
+    }
+
+    [data-testid='stHorizontalBlock']:has(.whale-monitor-heading) > [data-testid='stColumn']:nth-child(2) {
+        width: calc(2% - 1rem) !important;
+        flex: 1 1 calc(2% - 1rem) !important;
+    }
+
+    [data-testid='stHorizontalBlock']:has(.whale-monitor-heading) > [data-testid='stColumn']:nth-child(3) {
+        width: calc(25% - 1rem) !important;
+        flex: 1 1 calc(25% - 1rem) !important;
+    }
+
+    iframe[data-testid='stIFrame'] {
+        height: clamp(460px, 34vw, 678px) !important;
+    }
+}
+
+[data-testid='stDecoration'] {
+    background-image: linear-gradient(90deg, #e4474d, #159b87) !important;
+}
+
 :root {
     --pi-cycle-111-color: #d97706;
     --pi-cycle-350-color: #2e78a8;
@@ -66,7 +92,7 @@ body.btc-dark-theme {
 h1 {
     font-family: 'Archivo', sans-serif !important;
     letter-spacing: -2px;
-    font-size: 38px !important;
+    font-size: 35px !important;
     font-weight: 800 !important;
     padding-bottom: 2rem !important;
     padding-top: 6px !important;
@@ -74,7 +100,7 @@ h1 {
 
 h3 {
     font-family: 'Archivo', sans-serif !important;
-    font-size: 19px !important;
+    font-size: 22px !important;
     font-weight: 800 !important;
 }
 
@@ -89,6 +115,7 @@ h3#strategy_simulator {
 }
 
 .whale-monitor-heading h3 {
+    font-size: 17px !important;
     margin: 0 !important;
     text-align: center;
 }
@@ -101,6 +128,7 @@ h3#strategy_simulator {
 }
 
 .whale-top-inflows-heading h4 {
+    font-size: 14px !important;
     margin: 0 !important;
 }
 
@@ -175,6 +203,10 @@ body.btc-dark-theme [data-testid="stMetricValue"] * {
 
 .st-key-market_summary h3 {
     font-size: 16.15px !important;
+}
+
+.st-key-backtest_count_up {
+    display: none;
 }
 
 [data-testid="stExpander"]:has(.st-key-backtest_trade_details) summary:hover {

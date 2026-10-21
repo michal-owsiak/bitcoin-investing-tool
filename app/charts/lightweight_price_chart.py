@@ -7,7 +7,7 @@ CHART_LIBRARY_URL = (
     'https://unpkg.com/lightweight-charts@4.2.3/dist/'
     'lightweight-charts.standalone.production.js'
 )
-CHART_HEIGHT = 750
+CHART_HEIGHT = 660
 CHART_TITLE = 'BTC Price (USDT) with Supertrend'
 CHART_LEGEND_HTML = '''
 <div role="group" aria-label="Chart legend" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:0 0 5px;color:inherit;font:11px Geist,Arial,sans-serif;">
@@ -239,9 +239,9 @@ HTML_TEMPLATE = r'''<!doctype html>
 <style>
 * { box-sizing: border-box; }
 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
-body { --chart-background: #fbfbfb; --chart-foreground: #3e4144; --chart-muted: #6b7280; --chart-grid: rgba(62,65,68,.07); --chart-border: rgba(62,65,68,.18); --tooltip-background: rgba(251,251,251,.96); --tooltip-shadow: 0 2px 8px rgba(0,0,0,.08); font-family: Geist, Arial, sans-serif; color: var(--chart-foreground); background: var(--chart-background); }
+body { --chart-background: #fbfbfb; --chart-foreground: #3e4144; --chart-muted: #6b7280; --chart-grid: rgba(62,65,68,.07); --chart-border: rgba(62,65,68,.18); --tooltip-background: rgba(251,251,251,.96); --tooltip-shadow: 0 2px 8px rgba(0,0,0,.08); font-family: Geist, Arial, sans-serif; color: var(--chart-foreground); background: transparent; }
 body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --chart-muted: #aab4c2; --chart-grid: rgba(214,222,232,.09); --chart-border: rgba(214,222,232,.2); --tooltip-background: rgba(25,30,39,.98); --tooltip-shadow: 0 2px 10px rgba(0,0,0,.38); }
-#chart-shell { position: relative; width: 100%; height: __CHART_HEIGHT__px; }
+#chart-shell { position: relative; width: 100%; height: calc(100% - 18px); }
 #chart { width: 100%; height: 100%; }
 #trend-fill { position: absolute; z-index: 1; pointer-events: none; overflow: hidden; }
 #tooltip { display: none; position: absolute; z-index: 3; max-width: 220px; padding: 8px 10px; border: 1px solid var(--chart-border); border-radius: 4px; background: var(--tooltip-background); box-shadow: var(--tooltip-shadow); font-size: 12px; line-height: 1.5; pointer-events: none; }
@@ -500,8 +500,8 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
       if (!row || (!row.bullFlip && !row.bearFlip)) continue;
       const x = chart.timeScale().logicalToCoordinate(index);
       if (x === null) continue;
-      const size = 7;
-      const markerY = 66;
+      const size = 9;
+      const markerY = 67;
       const markerX = Math.max(size, Math.min(x, trendFill.clientWidth - size));
       const points = row.bullFlip
         ? `${markerX},${markerY - size} ${markerX - size},${markerY + size} ${markerX + size},${markerY + size}`
@@ -580,26 +580,26 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
       const x = chart.timeScale().logicalToCoordinate(index);
       if (x === null) continue;
       const isBuy = event.side === 'BUY';
-      const width = isBuy ? 31 : 35;
+      const width = isBuy ? 34 : 39;
       const badgeX = Math.max(2, Math.min(x - width / 2, trendFill.clientWidth - width - 2));
       let lane = badgeLaneRightEdges.findIndex(rightEdge => rightEdge + 4 <= badgeX);
       if (lane < 0) lane = badgeLaneRightEdges.length;
       badgeLaneRightEdges[lane] = badgeX + width;
-      const y = 86 + lane * 18;
+      const y = 86 + lane * 20;
       const badge = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       badge.setAttribute('x', badgeX);
       badge.setAttribute('y', y);
       badge.setAttribute('width', width);
-      badge.setAttribute('height', 16);
+      badge.setAttribute('height', 18);
       badge.setAttribute('rx', 3);
       badge.setAttribute('fill', isBuy ? bullishColor : bearishColor);
       trendFill.appendChild(badge);
       const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       label.setAttribute('x', badgeX + width / 2);
-      label.setAttribute('y', y + 11.5);
+      label.setAttribute('y', y + 12.75);
       label.setAttribute('text-anchor', 'middle');
       label.setAttribute('fill', '#ffffff');
-      label.setAttribute('font-size', '9');
+      label.setAttribute('font-size', '10');
       label.setAttribute('font-weight', '600');
       label.textContent = event.side;
       trendFill.appendChild(label);
@@ -689,12 +689,28 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
     tooltip.style.top = Math.max(8, Math.min(top, container.clientHeight - tooltip.offsetHeight - 8)) + 'px';
   });
 
+  // Keep the user's zoom/scroll across Streamlit reruns (e.g. toggling Pi Cycle), per timeframe.
+  const candleInterval = candles.length > 1 ? candles[1].time - candles[0].time : 0;
+  const rangeStorageKey = `btc-price-chart-range:${candleInterval}`;
+  let savedRange = null;
+  try {
+    savedRange = JSON.parse(window.sessionStorage.getItem(rangeStorageKey));
+  } catch (_) {}
+  chart.timeScale().subscribeVisibleLogicalRangeChange(range => {
+    if (!range) return;
+    try {
+      window.sessionStorage.setItem(rangeStorageKey, JSON.stringify({from: range.from, to: range.to}));
+    } catch (_) {}
+  });
+
   const firstVisibleCandle = candles[Math.max(0, candles.length - 400)];
   const firstVisibleIndex = timeToLogical(firstVisibleCandle.time);
   const projectedHalvingIndexes = halvings
     .filter(item => item.projected)
     .map(item => timeToLogical(item.time));
-  if (projectedHalvingIndexes.length) {
+  if (Number.isFinite(savedRange?.from) && Number.isFinite(savedRange?.to) && savedRange.to > savedRange.from) {
+    chart.timeScale().setVisibleLogicalRange(savedRange);
+  } else if (projectedHalvingIndexes.length) {
     const projectedEnd = Math.max(
       timelineTimes.length + 5,
       ...projectedHalvingIndexes.map(index => index + 5),
@@ -745,7 +761,6 @@ def build_lightweight_chart_html(price_df, halvings_df, backtest_trades=None, pi
   pi_cycle_series = _pi_cycle_series(pi_cycle_df, candles)
   replacements = {
     '__CHART_LIBRARY_URL__': CHART_LIBRARY_URL,
-    '__CHART_HEIGHT__': str(CHART_HEIGHT),
     '__CANDLE_DATA__': _script_json(candles),
     '__HALVING_DATA__': _script_json(halvings),
     '__TRADE_MARKER_DATA__': _script_json(trade_markers),

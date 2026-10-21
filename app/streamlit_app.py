@@ -61,7 +61,7 @@ with col_1:
         )
     with title_col:
         st.markdown(
-            f'<div style="padding-top:31px;text-align:center;font-family:Archivo,Arial,sans-serif;font-size:19px;font-weight:700;line-height:22px;">{CHART_TITLE}</div>',
+            f'<div style="padding-top:31px;text-align:center;font-family:Archivo,Arial,sans-serif;font-size:17px;font-weight:700;line-height:22px;">{CHART_TITLE}</div>',
             unsafe_allow_html=True,
         )
     with pi_cycle_col:
