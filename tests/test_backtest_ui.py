@@ -12,7 +12,7 @@ import sys
 sys.path.insert(0, {APP_PATH!r})
 import pandas as pd
 import streamlit as st
-from components.strategy_simulatorimport (
+from components.strategy_simulator import (
     _default_entry_index,
     get_selected_backtest_trades,
     render_strategy_simulator,
@@ -348,6 +348,74 @@ render_market_summary({
         self.assertFalse(app.exception)
         self.assertEqual(app.metric[0].value, '1,500.00')
         self.assertEqual(len(app.selectbox(key='backtest_entry_v2_1D').options), 1)
+
+    def test_recurring_buys_toggle_adds_scheduled_buys(self):
+        app = AppTest.from_string(
+            APP.replace(
+                "pd.date_range('2024-01-01', periods=4)",
+                "pd.date_range('2024-01-01', periods=4, freq='7D')",
+            ).replace(
+                "pd.date_range('2024-01-02', periods=4)",
+                "pd.date_range('2024-01-02', periods=4, freq='7D')",
+            )
+        ).run()
+        app.selectbox(key='backtest_entry_v2_1W').select_index(1).run()
+        app.selectbox(key='backtest_strategy').select('Hold until today').run()
+        self.assertEqual(app.metric[0].value, '1,800.00')
+        # The fields stay rendered (CSS hides them) and are ignored until the checkbox is on.
+        app.text_input(key='backtest_recurring_amount_text').set_value('500').run()
+        self.assertEqual(app.metric[0].value, '1,800.00')
+        self.assertEqual(app.metric[1].label, 'Annualized return (CAGR)')
+        app.text_input(key='backtest_recurring_amount_text').set_value('100').run()
+
+        recurring = app.checkbox(key='backtest_recurring_enabled')
+        self.assertEqual(recurring.label, 'Add recurring buys')
+        recurring.check().run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.selectbox(key='backtest_recurring_frequency').options, [
+            'Weekly', 'Every 2 weeks', 'Monthly',
+        ])
+        self.assertEqual(app.text_input(key='backtest_recurring_amount_text').value, '100.00')
+        # 10 BTC + 100 USDT bought at 150, 120 and 180, all valued at 180.
+        self.assertEqual(app.metric[0].value, '2,170.00')
+        self.assertEqual(app.metric[1].label, 'Annualized return (IRR)')
+        self.assertTrue(any(
+            'Invested: **1,300.00 USDT** (1,000.00 initial + 300.00 recurring)' in item.value
+            for item in app.caption
+        ))
+        self.assertIn('Recurring buys: **3**', [item.value for item in app.caption])
+        self.assertEqual(app.dataframe[0].value['Status'].tolist(), ['Open'])
+        recurring_buys = app.dataframe[1].value
+        self.assertEqual(recurring_buys['Date'].tolist(), ['2024-01-09', '2024-01-16', '2024-01-23'])
+        self.assertEqual(recurring_buys['Price (USDT)'].tolist(), [150.0, 120.0, 180.0])
+        self.assertEqual(recurring_buys['Status'].tolist(), ['Bought BTC'] * 3)
+
+        app.selectbox(key='backtest_recurring_frequency').select('Every 2 weeks').run()
+        self.assertEqual(app.metric[0].value, '1,950.00')
+
+        app.button(key='backtest_recurring_increase').click().run()
+        self.assertEqual(app.text_input(key='backtest_recurring_amount_text').value, '200.00')
+        self.assertEqual(app.metric[0].value, '2,100.00')
+        app.button(key='backtest_recurring_decrease').click().run()
+        self.assertEqual(app.text_input(key='backtest_recurring_amount_text').value, '100.00')
+        self.assertEqual(app.text_input(key='backtest_investment_text').value, '1,000.00')
+
+        app.text_input(key='backtest_recurring_amount_text').set_value('250').run()
+        app.checkbox(key='backtest_recurring_enabled').uncheck().run()
+        self.assertEqual(app.metric[0].value, '1,800.00')
+        app.checkbox(key='backtest_recurring_enabled').check().run()
+        self.assertEqual(app.selectbox(key='backtest_recurring_frequency').value, 'Every 2 weeks')
+        self.assertEqual(app.text_input(key='backtest_recurring_amount_text').value, '250.00')
+        self.assertEqual(app.metric[0].value, '2,175.00')
+
+        app.text_input(key='backtest_recurring_amount_text').set_value('abc').run()
+        self.assertEqual(len(app.warning), 1)
+        self.assertEqual(len(app.metric), 0)
+
+        app.checkbox(key='backtest_recurring_enabled').uncheck().run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.metric[0].value, '1,800.00')
+        self.assertEqual(app.metric[1].label, 'Annualized return (CAGR)')
 
     def test_no_bullish_flips(self):
         app = AppTest.from_string(APP.replace(

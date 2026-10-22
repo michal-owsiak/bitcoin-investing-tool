@@ -241,7 +241,8 @@ HTML_TEMPLATE = r'''<!doctype html>
 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
 body { --chart-background: #fbfbfb; --chart-foreground: #3e4144; --chart-muted: #6b7280; --chart-grid: rgba(62,65,68,.07); --chart-border: rgba(62,65,68,.18); --tooltip-background: rgba(251,251,251,.96); --tooltip-shadow: 0 2px 8px rgba(0,0,0,.08); font-family: Geist, Arial, sans-serif; color: var(--chart-foreground); background: transparent; }
 body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --chart-muted: #aab4c2; --chart-grid: rgba(214,222,232,.09); --chart-border: rgba(214,222,232,.2); --tooltip-background: rgba(25,30,39,.98); --tooltip-shadow: 0 2px 10px rgba(0,0,0,.38); }
-#chart-shell { position: relative; width: 100%; height: calc(100% - 18px); }
+#chart-shell { position: relative; width: 100%; height: calc(100% - 18px); opacity: 0; transition: opacity .15s ease-out; }
+#chart-shell.ready { opacity: 1; }
 #chart { width: 100%; height: 100%; }
 #trend-fill { position: absolute; z-index: 1; pointer-events: none; overflow: hidden; }
 #tooltip { display: none; position: absolute; z-index: 3; max-width: 220px; padding: 8px 10px; border: 1px solid var(--chart-border); border-radius: 4px; background: var(--tooltip-background); box-shadow: var(--tooltip-shadow); font-size: 12px; line-height: 1.5; pointer-events: none; }
@@ -264,11 +265,17 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
 (() => {
   if (!window.LightweightCharts) {
     document.getElementById('chart').textContent = 'Unable to load Lightweight Charts. Check browser access to unpkg.com.';
+    document.getElementById('chart-shell').classList.add('ready');
     return;
   }
   const candles = __CANDLE_DATA__;
   const halvings = __HALVING_DATA__;
-  const tradeMarkers = __TRADE_MARKER_DATA__;
+  // Trade markers come from the parent page (see render_trade_marker_bridge), so changing the
+  // simulator inputs leaves this iframe's HTML unchanged and Streamlit doesn't remount the chart.
+  let tradeMarkers = [];
+  try {
+    tradeMarkers = window.parent.__btcTradeMarkers || [];
+  } catch (_) {}
   const piCycleSeries = __PI_CYCLE_SERIES__;
   const timelineTimes = __TIMELINE_DATA__;
   const bullishSegments = __BULLISH_SEGMENTS__;
@@ -283,6 +290,21 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
   const bullishColor = '#159b87';
   const bearishColor = '#e4474d';
 
+  function colorChannels(color) {
+    const channels = color.match(/[\d.]+/g)?.map(Number);
+    return channels && channels.length >= 3 ? channels : null;
+  }
+
+  function relativeLuminance(channels) {
+    const linear = channels.slice(0, 3).map(channel => {
+      const normalized = channel / 255;
+      return normalized <= 0.04045
+        ? normalized / 12.92
+        : ((normalized + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+  }
+
   function detectHostTheme() {
     try {
       const parentDocument = window.parent.document;
@@ -294,17 +316,18 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
       for (const candidate of candidates) {
         if (!candidate) continue;
         const hostStyle = window.parent.getComputedStyle(candidate);
-        const background = hostStyle.backgroundColor;
-        const channels = background.match(/[\d.]+/g)?.map(Number);
-        if (!channels || channels.length < 3 || (channels[3] ?? 1) < 0.05) continue;
-        const linear = channels.slice(0, 3).map(channel => {
-          const normalized = channel / 255;
-          return normalized <= 0.04045
-            ? normalized / 12.92
-            : ((normalized + 0.055) / 1.055) ** 2.4;
-        });
+        if (!colorChannels(hostStyle.backgroundColor)) continue;
+        // The mode is read from the text color, so CSS keyed on btc-dark-theme may restyle the
+        // background; the class is set before reading the final background.
+        const foregroundChannels = colorChannels(hostStyle.color);
+        const dark = foregroundChannels
+          ? relativeLuminance(foregroundChannels) > 0.38
+          : relativeLuminance(colorChannels(hostStyle.backgroundColor)) < 0.38;
+        parentDocument.body.classList.toggle('btc-dark-theme', dark);
+        const channels = colorChannels(hostStyle.backgroundColor);
+        if ((channels[3] ?? 1) < 0.05) continue;
         return {
-          dark: 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2] < 0.38,
+          dark,
           background: `rgb(${channels.slice(0, 3).map(Math.round).join(', ')})`,
           foreground: hostStyle.color,
         };
@@ -619,6 +642,10 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
   container.addEventListener('pointermove', scheduleTrendFill, {passive: true});
   container.addEventListener('wheel', scheduleTrendFill, {passive: true});
   container.addEventListener('pointerup', scheduleTrendFill, {passive: true});
+  window.__btcSetTradeMarkers = markers => {
+    tradeMarkers = markers;
+    scheduleTrendFill();
+  };
 
   function syncChartTheme() {
     const nextTheme = detectHostTheme();
@@ -738,7 +765,12 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
   const chartResizeObserver = new ResizeObserver(syncChartSize);
   chartResizeObserver.observe(container);
   window.addEventListener('resize', syncChartSize, {passive: true});
-  requestAnimationFrame(syncChartSize);
+  // Reveal only after the chart has been sized to its final frame, so a fresh iframe
+  // never flashes its first, mis-sized render.
+  requestAnimationFrame(() => {
+    syncChartSize();
+    requestAnimationFrame(() => document.getElementById('chart-shell').classList.add('ready'));
+  });
 })();
 </script>
 </body>
@@ -754,16 +786,14 @@ def _script_json(value):
   )
 
 
-def build_lightweight_chart_html(price_df, halvings_df, backtest_trades=None, pi_cycle_df=None):
+def build_lightweight_chart_html(price_df, halvings_df, pi_cycle_df=None):
   candles, halvings = _chart_data(price_df, halvings_df)
   timeline = _timeline_times(candles, halvings)
-  trade_markers = _backtest_marker_data(candles, backtest_trades)
   pi_cycle_series = _pi_cycle_series(pi_cycle_df, candles)
   replacements = {
     '__CHART_LIBRARY_URL__': CHART_LIBRARY_URL,
     '__CANDLE_DATA__': _script_json(candles),
     '__HALVING_DATA__': _script_json(halvings),
-    '__TRADE_MARKER_DATA__': _script_json(trade_markers),
     '__PI_CYCLE_SERIES__': _script_json(pi_cycle_series),
     '__TIMELINE_DATA__': _script_json(timeline),
     '__BULLISH_SEGMENTS__': _script_json(_trend_series_segments(candles, 'bullTrend')),
@@ -779,6 +809,28 @@ def render_lightweight_price_chart(price_df, halvings_df, backtest_trades=None, 
     import streamlit as st
     import streamlit.components.v1 as components
 
-    html = build_lightweight_chart_html(price_df, halvings_df, backtest_trades, pi_cycle_df)
+    html = build_lightweight_chart_html(price_df, halvings_df, pi_cycle_df)
     st.markdown(_chart_legend_html(pi_cycle_df is not None), unsafe_allow_html=True)
     components.html(html, height=CHART_HEIGHT + 18, scrolling=False)
+    candles, _ = _chart_data(price_df, halvings_df)
+    render_trade_marker_bridge(_backtest_marker_data(candles, backtest_trades))
+
+
+def render_trade_marker_bridge(markers):
+    import streamlit as st
+    import streamlit.components.v1 as components
+
+    # A hidden iframe that hands the BUY/SELL markers to the chart iframe: it stores them on the
+    # parent page for a chart that is still loading and pushes them to one that is already drawn.
+    markers_json = _script_json(markers)
+    with st.container(key='price_chart_marker_bridge'):
+        components.html(
+            '<script>'
+            'const host = window.parent;'
+            f'host.__btcTradeMarkers = {markers_json};'
+            'for (const frame of host.document.querySelectorAll("iframe")) {'
+            '  try { frame.contentWindow.__btcSetTradeMarkers?.(host.__btcTradeMarkers); } catch (_) {}'
+            '}'
+            '</script>',
+            height=0,
+        )

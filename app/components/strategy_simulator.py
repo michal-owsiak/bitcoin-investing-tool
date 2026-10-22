@@ -6,7 +6,12 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
-from logic.backtest import STRATEGIES, calculate_backtest, prepare_backtest_data
+from logic.backtest import (
+    RECURRING_FREQUENCIES,
+    STRATEGIES,
+    calculate_backtest,
+    prepare_backtest_data,
+)
 
 
 STRATEGY_DESCRIPTIONS = {
@@ -19,6 +24,7 @@ STRATEGY_DESCRIPTIONS = {
     ),
 }
 DEFAULT_BACKTEST_ENTRY_DATE = '2020-08-02'
+DEFAULT_RECURRING_AMOUNT = '100.00'
 
 # Runs in the parent Streamlit page: when the simulator results change, numbers count
 # from their previous values to the new ones instead of switching instantly.
@@ -130,22 +136,52 @@ def parse_investment(value):
     return investment
 
 
-def format_investment_input():
+def format_investment_input(key='backtest_investment_text'):
     try:
-        investment = parse_investment(st.session_state['backtest_investment_text'])
+        investment = parse_investment(st.session_state[key])
     except ValueError:
         return
-    st.session_state['backtest_investment_text'] = f'{investment:,.2f}'
+    st.session_state[key] = f'{investment:,.2f}'
 
 
-def change_investment(amount):
+def change_investment(amount, key='backtest_investment_text'):
     try:
-        investment = parse_investment(st.session_state['backtest_investment_text'])
+        investment = parse_investment(st.session_state[key])
     except ValueError:
         return
     investment = max(0.01, investment + amount)
     if math.isfinite(investment):
-        st.session_state['backtest_investment_text'] = f'{investment:,.2f}'
+        st.session_state[key] = f'{investment:,.2f}'
+
+
+def _render_amount_input(label, text_key, default, container_key, button_keys, noun):
+    """A USDT text input with -/+ 100 buttons overlaid on its right edge."""
+    decrease_key, increase_key = button_keys
+    with st.container(key=container_key):
+        if text_key not in st.session_state:
+            st.session_state[text_key] = default
+        text = st.text_input(
+            label, key=text_key, on_change=format_investment_input, args=(text_key,),
+        )
+        try:
+            current = parse_investment(text)
+        except ValueError:
+            current = None
+        with st.container(key=f'{container_key}_decrease'):
+            st.button(
+                '', icon=':material/remove:', key=decrease_key,
+                help=f'Decrease {noun} by 100 USDT',
+                on_click=change_investment, args=(-100.0, text_key),
+                disabled=current is None or current <= 0.01,
+            )
+        with st.container(key=f'{container_key}_increase'):
+            st.button(
+                '', icon=':material/add:', key=increase_key,
+                help=f'Increase {noun} by 100 USDT',
+                on_click=change_investment, args=(100.0, text_key),
+                disabled=current is None,
+            )
+    return text
 
 
 def _render_count_up_script():
@@ -159,6 +195,37 @@ def _render_count_up_script():
             '</script>',
             height=0,
         )
+
+
+def _recurring_buy_inputs():
+    """Returns (amount, frequency); frequency is None while recurring buys are switched off."""
+    if not st.session_state.get('backtest_recurring_enabled', False):
+        return 0.0, None
+    amount = parse_investment(
+        st.session_state.get('backtest_recurring_amount_text', DEFAULT_RECURRING_AMOUNT)
+    )
+    frequency = st.session_state.get('backtest_recurring_frequency', next(iter(RECURRING_FREQUENCIES)))
+    return amount, frequency
+
+
+def _render_recurring_buy_controls():
+    # The fields are always rendered and main.css slides them open while the checkbox is
+    # checked; that keeps their values when collapsed and lets the section animate.
+    with st.container(key='backtest_recurring'):
+        with st.container(key='backtest_recurring_toggle'):
+            st.checkbox('Add recurring buys', key='backtest_recurring_enabled')
+        with st.container(key='backtest_recurring_fields'):
+            frequency_col, amount_col, _ = st.columns(3)
+            with frequency_col:
+                st.selectbox(
+                    'Frequency', list(RECURRING_FREQUENCIES), key='backtest_recurring_frequency',
+                )
+            with amount_col:
+                _render_amount_input(
+                    'Amount per buy (USDT)', 'backtest_recurring_amount_text', DEFAULT_RECURRING_AMOUNT,
+                    'backtest_recurring_amount_control',
+                    ('backtest_recurring_decrease', 'backtest_recurring_increase'), 'amount per buy',
+                )
 
 
 def _default_entry_index(entry_options):
@@ -190,7 +257,10 @@ def get_selected_backtest_trades(price_df, timeframe):
 
     try:
         investment = parse_investment(investment_text)
-        result = calculate_backtest(data, entry_date, investment, strategy)
+        recurring_amount, recurring_frequency = _recurring_buy_inputs()
+        result = calculate_backtest(
+            data, entry_date, investment, strategy, recurring_amount, recurring_frequency,
+        )
     except ValueError:
         return []
     return result['trades']
@@ -223,38 +293,21 @@ def render_strategy_simulator(price_df, timeframe):
             key=f'backtest_entry_v2_{timeframe}',
         )
     with amount_col:
-        with st.container(key='backtest_investment_control'):
-            if 'backtest_investment_text' not in st.session_state:
-                st.session_state['backtest_investment_text'] = '1,000.00'
-            investment_text = st.text_input(
-                'Investment (USDT)',
-                key='backtest_investment_text', on_change=format_investment_input,
-            )
-            try:
-                current_investment = parse_investment(investment_text)
-            except ValueError:
-                current_investment = None
-            with st.container(key='backtest_investment_decrease'):
-                st.button(
-                    '', icon=':material/remove:', key='backtest_decrease',
-                    help='Decrease investment by 100 USDT',
-                    on_click=change_investment, args=(-100.0,),
-                    disabled=current_investment is None or current_investment <= 0.01,
-                )
-            with st.container(key='backtest_investment_increase'):
-                st.button(
-                    '', icon=':material/add:', key='backtest_increase',
-                    help='Increase investment by 100 USDT',
-                    on_click=change_investment, args=(100.0,),
-                    disabled=current_investment is None,
-                )
+        investment_text = _render_amount_input(
+            'Investment (USDT)', 'backtest_investment_text', '1,000.00',
+            'backtest_investment_control', ('backtest_decrease', 'backtest_increase'), 'investment',
+        )
     with strategy_col:
         strategy = st.selectbox('Strategy', STRATEGIES, key='backtest_strategy')
     st.caption(f'Strategy: {STRATEGY_DESCRIPTIONS[strategy]}')
+    _render_recurring_buy_controls()
 
     try:
         investment = parse_investment(investment_text)
-        result = calculate_backtest(data, entry_date, investment, strategy)
+        recurring_amount, recurring_frequency = _recurring_buy_inputs()
+        result = calculate_backtest(
+            data, entry_date, investment, strategy, recurring_amount, recurring_frequency,
+        )
     except ValueError as error:
         st.warning(str(error))
         return
@@ -267,8 +320,12 @@ def render_strategy_simulator(price_df, timeframe):
         value_col.metric('Portfolio value (USDT)', f"{result['final_value']:,.2f}")
         cagr = result['annualized_return_pct']
         cagr_col.metric(
-            'Annualized return (CAGR)',
+            'Annualized return (IRR)' if recurring_frequency else 'Annualized return (CAGR)',
             f'{cagr:+,.2f}%' if cagr is not None else 'N/A (<1Y)',
+            help=(
+                'Money-weighted: each recurring buy counts only from the date it was made.'
+                if recurring_frequency else None
+            ),
         )
         for column, label, value, suffix in [
             (profit_col, 'Profit / loss (USDT)', result['profit'], ''),
@@ -282,8 +339,14 @@ def render_strategy_simulator(price_df, timeframe):
                 unsafe_allow_html=True,
             )
 
+        invested = f"Invested: **{result['total_invested']:,.2f} USDT**"
+        if recurring_frequency:
+            invested += (
+                f" ({result['investment']:,.2f} initial + "
+                f"{result['total_invested'] - result['investment']:,.2f} recurring)"
+            )
         investment_details = (
-            f"Invested: **{result['investment']:,.2f} USDT** | "
+            f"{invested} | "
             f"Entry: **{result['entry_date']:%Y-%m-%d}** "
             f"at **{result['entry_price']:,.2f} USDT**"
         )
@@ -300,25 +363,44 @@ def render_strategy_simulator(price_df, timeframe):
             )
         st.caption(f'{investment_details}  \n{valuation_details}')
 
-        if strategy in {'Follow all signals', 'Follow signals, never sell at a loss'}:
+        follows_signals = strategy in {'Follow all signals', 'Follow signals, never sell at a loss'}
+        activity = []
+        if follows_signals:
+            activity.append(f"Closed trades: **{result['closed_trades']}**")
+        if recurring_frequency:
+            recurring_buys = f"Recurring buys: **{result['recurring_buys']}**"
+            if result['recurring_buys_in_cash']:
+                recurring_buys += (
+                    f" ({result['recurring_buys_in_cash']} held as cash until a bullish flip)"
+                )
+            activity.append(recurring_buys)
+        if follows_signals:
             position = 'BTC (open)' if result['position_open'] else 'Cash (USDT)'
-            st.caption(
-                f"Closed trades: **{result['closed_trades']}** | Position: **{position}**"
-            )
+            activity.append(f'Position: **{position}**')
+        if activity:
+            st.caption(' | '.join(activity))
     _render_count_up_script()
 
     with st.expander('Trade details', expanded=True):
         trades = pd.DataFrame(result['trades'])
+        if not recurring_frequency:
+            # Without recurring buys the average cost always equals the entry price.
+            trades = trades.drop(columns='average_cost')
         for column in ['entry_date', 'exit_date']:
             trades[column] = pd.to_datetime(trades[column], utc=True).dt.strftime('%Y-%m-%d')
         trades = trades.rename(columns={
             'entry_date': 'Entry date', 'entry_price': 'Entry price (USDT)',
+            'average_cost': 'Avg cost (USDT)',
             'exit_date': 'Exit date', 'exit_price': 'Exit price (USDT)',
             'value': 'Portfolio value (USDT)', 'status': 'Status',
             'trade_return_pct': 'Trade return (%)',
             'cumulative_return_pct': 'Cumulative return (%)',
         })
-        price_columns = ['Entry price (USDT)', 'Exit price (USDT)', 'Portfolio value (USDT)']
+        price_columns = [
+            column for column in
+            ['Entry price (USDT)', 'Avg cost (USDT)', 'Exit price (USDT)', 'Portfolio value (USDT)']
+            if column in trades.columns
+        ]
         return_columns = ['Trade return (%)', 'Cumulative return (%)']
         styled_trades = (
             trades.style.format(na_rep='-')
@@ -328,9 +410,37 @@ def render_strategy_simulator(price_df, timeframe):
             .map(lambda value: 'color: #999999' if pd.isna(value) else '', subset=['Exit date', 'Exit price (USDT)'])
         )
         with st.container(key='backtest_trade_details'):
-            st.dataframe(styled_trades, hide_index=True, use_container_width=True)
+            # The grid keeps its column widths when the same table gains the Avg cost column;
+            # nesting it one level deeper in recurring mode makes Streamlit mount a fresh grid.
+            table_container = st.container() if recurring_frequency else st
+            table_container.dataframe(styled_trades, hide_index=True, use_container_width=True)
 
+        if recurring_frequency and result['recurring_buy_log']:
+            # A separate table: as rows of the trades table, recurring buys would leave most
+            # columns empty, which Streamlit renders as "None".
+            recurring_buys = pd.DataFrame(result['recurring_buy_log'])
+            recurring_buys = pd.DataFrame({
+                'Date': recurring_buys['date'].dt.strftime('%Y-%m-%d'),
+                'Price (USDT)': recurring_buys['price'],
+                'Amount (USDT)': recurring_buys['amount'],
+                'Status': recurring_buys['bought_btc'].map({True: 'Bought BTC', False: 'Held as cash'}),
+            })
+            st.markdown('**Recurring buys**')
+            with st.container(key='backtest_recurring_buy_details'):
+                st.dataframe(
+                    recurring_buys.style
+                    .format('{:,.2f}', subset=['Price (USDT)', 'Amount (USDT)'])
+                    .map(lambda value: 'color: #999999' if value == 'Held as cash' else '', subset=['Status']),
+                    hide_index=True, use_container_width=True,
+                )
+
+    recurring_note = (
+        'Recurring buys execute at the close of the first candle on or after each scheduled date; '
+        'while the strategy holds cash they wait for the next bullish flip. '
+        if recurring_frequency else ''
+    )
     st.caption(
         'Trades are simulated at the signal candle\'s closing price (UTC). '
+        f'{recurring_note}'
         'Results exclude fees, slippage and taxes. Historical results do not predict future returns.'
     )

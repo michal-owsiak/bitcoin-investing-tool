@@ -163,5 +163,101 @@ class BacktestTests(unittest.TestCase):
         self.assertEqual(result['return_pct'], 0)
 
 
+class RecurringBuyTests(unittest.TestCase):
+    def setUp(self):
+        self.data = pd.DataFrame({
+            'OPEN_TIME': pd.date_range('2024-01-01', periods=5, freq='7D'),
+            'CLOSE_TIME': pd.date_range('2024-01-07', periods=5, freq='7D'),
+            'CLOSE': [100.0, 200.0, 50.0, 100.0, 400.0],
+            'SIGNAL_FLIP_UP': [True, False, False, True, False],
+            'SIGNAL_FLIP_DOWN': [False, False, True, False, False],
+        })
+
+    def calculate(self, strategy, frequency='Weekly', amount=100.0, data=None):
+        return calculate_backtest(
+            self.data if data is None else data, '2024-01-07', 1000, strategy,
+            recurring_amount=amount, recurring_frequency=frequency,
+        )
+
+    def test_hold_buys_btc_on_every_scheduled_candle(self):
+        result = self.calculate('Hold until today')
+        # BTC: 10 + 0.5 + 2 + 1 + 0.25 = 13.75, valued at 400.
+        self.assertAlmostEqual(result['final_value'], 5500)
+        self.assertEqual(result['total_invested'], 1400)
+        self.assertEqual(result['recurring_buys'], 4)
+        self.assertAlmostEqual(result['profit'], 4100)
+        self.assertAlmostEqual(result['return_pct'], (5500 / 1400 - 1) * 100)
+        self.assertAlmostEqual(result['trades'][0]['average_cost'], 1400 / 13.75)
+
+    def test_follow_signals_keeps_deposits_in_cash_until_next_bullish_flip(self):
+        result = self.calculate('Follow all signals')
+        # Sell 12.5 BTC at 50 -> 625 cash; +100 cash; rebuy 7.25 BTC at 100; +0.25 BTC at 400.
+        self.assertAlmostEqual(result['final_value'], 3000)
+        self.assertEqual(result['total_invested'], 1400)
+        closed, open_trade = result['trades']
+        self.assertAlmostEqual(closed['value'], 625)
+        self.assertAlmostEqual(closed['trade_return_pct'], (625 / 1200 - 1) * 100)
+        self.assertAlmostEqual(closed['cumulative_return_pct'], (625 / 1200 - 1) * 100)
+        self.assertAlmostEqual(open_trade['average_cost'], 825 / 7.5)
+        self.assertAlmostEqual(open_trade['cumulative_return_pct'], (3000 / 1400 - 1) * 100)
+        self.assertEqual(result['recurring_buys_in_cash'], 1)
+        self.assertEqual(
+            [buy['price'] for buy in result['recurring_buy_log']], [200.0, 50.0, 100.0, 400.0],
+        )
+        self.assertEqual(
+            [buy['bought_btc'] for buy in result['recurring_buy_log']], [True, True, False, True],
+        )
+        self.assertEqual(result['recurring_buy_log'][2]['date'], pd.Timestamp('2024-01-28', tz='UTC'))
+
+    def test_never_sell_at_loss_compares_against_average_cost(self):
+        result = self.calculate('Follow signals, never sell at a loss')
+        self.assertAlmostEqual(result['final_value'], 5500)
+        self.assertEqual(result['closed_trades'], 0)
+
+    def test_exit_strategy_stops_deposits_after_exit(self):
+        result = self.calculate('Exit on next bearish flip')
+        self.assertAlmostEqual(result['final_value'], 625)
+        self.assertEqual(result['total_invested'], 1200)
+        self.assertEqual(result['recurring_buys'], 2)
+        self.assertFalse(result['position_open'])
+
+    def test_frequency_follows_calendar_dates(self):
+        biweekly = self.calculate('Hold until today', 'Every 2 weeks')
+        self.assertEqual(biweekly['recurring_buys'], 2)
+        self.assertAlmostEqual(biweekly['final_value'], (10 + 2 + 0.25) * 400)
+        monthly = self.calculate('Hold until today', 'Monthly')
+        self.assertEqual(monthly['recurring_buys'], 0)
+
+    def test_annualized_return_is_money_weighted(self):
+        monthly = pd.DateOffset(months=1)
+        data = pd.DataFrame({
+            'OPEN_TIME': pd.date_range('2020-01-01', periods=37, freq=monthly, tz='UTC'),
+            'CLOSE_TIME': pd.date_range('2020-01-07', periods=37, freq=monthly, tz='UTC'),
+            'CLOSE': [100.0 + 10 * index for index in range(37)],
+            'SIGNAL_FLIP_UP': [True] + [False] * 36,
+            'SIGNAL_FLIP_DOWN': [False] * 37,
+        })
+        result = calculate_backtest(
+            data, data['CLOSE_TIME'].iloc[0], 1000, 'Hold until today',
+            recurring_amount=100.0, recurring_frequency='Monthly',
+        )
+        rate = result['annualized_return_pct'] / 100
+        end = result['latest_date']
+        deposits = [(result['entry_date'], 1000.0)] + [
+            (date, 100.0) for date in data['CLOSE_TIME'].iloc[1:]
+        ]
+        future_value = sum(
+            amount * (1 + rate) ** ((end - date).total_seconds() / (365.2425 * 86400))
+            for date, amount in deposits
+        )
+        self.assertEqual(result['recurring_buys'], 36)
+        self.assertAlmostEqual(future_value, result['final_value'], places=4)
+
+    def test_invalid_recurring_inputs_are_rejected(self):
+        for frequency, amount in [('Daily', 100.0), ('Weekly', 0.0), ('Weekly', float('nan'))]:
+            with self.subTest(frequency=frequency, amount=amount), self.assertRaises(ValueError):
+                self.calculate('Hold until today', frequency, amount)
+
+
 if __name__ == '__main__':
     unittest.main()

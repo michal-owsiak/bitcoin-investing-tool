@@ -59,6 +59,7 @@ reloads.
   - Simulates an investment from a selected historical bullish flip on the chart's weekly or daily timeframe
   - Compares four strategies using existing Supertrend signals, without recalculating the indicator
   - Shows portfolio value, profit/loss, percentage return, and individual trade details
+  - Optionally adds recurring buys (weekly, every 2 weeks, or monthly) on top of the initial investment
 
 - **Pi Cycle Top Indicator (Optional)**
   - Overlays the 111-day simple moving average and twice the 350-day simple moving average, calculated from daily BTC closes
@@ -89,11 +90,31 @@ Select a bullish flip date, enter an investment amount in USDT, and choose a str
 
 The trade table includes entry and exit dates and prices, portfolio value, position status, **Trade return (%)**, and **Cumulative return (%)**. Cumulative return is measured against the initial investment and reflects reinvestment, rather than adding individual trade percentages. Returns on open positions are unrealized.
 
+### **Recurring Buys**
+
+Click the green **+** below the strategy selector to add recurring buys, then choose a frequency (**Weekly**, **Every 2 weeks**, or **Monthly**) and an amount per buy in USDT. Recurring buys work with every strategy:
+
+| Strategy state | Recurring buy |
+| --- | --- |
+| Holding BTC | Buys BTC at the close of the scheduled candle. |
+| Holding cash after a bearish exit | Adds the amount to cash, which is invested together with the rest at the next bullish flip. |
+| **Exit on next bearish flip** after the exit | Stops; no further buys are made. |
+
+With recurring buys enabled:
+
+- Buys are scheduled by calendar date from the entry date and execute at the first candle closing on or after each date, so weekly and daily timeframes follow the same schedule.
+- Profit/loss and return are measured against the total amount invested (initial investment plus all recurring buys).
+- The annualized return switches from CAGR to a money-weighted return (IRR), which counts each buy only from the date it was made.
+- **Follow signals, never sell at a loss** compares bearish flips against the average cost of all BTC bought, not only the first entry price.
+- The trade table adds an **Avg cost (USDT)** column, trade returns are measured against that average cost, and a separate **Recurring buys** table lists every buy with its date, price, amount, and whether it bought BTC or was held as cash.
+- Frequency and amount are kept when the section is collapsed and reopened.
+
 **Simulation assumptions:**
 
 - Entries and exits use the signal candle's closing price (`CLOSE`); dates refer to candle closes (`CLOSE_TIME`) in UTC.
 - Only history loaded for the selected timeframe is available. "Today" means the latest available close, not a live market quote.
 - The strategy is long-only and uses the full available capital for each purchase, including fractional BTC.
+- Recurring buys execute at the scheduled candle's closing price; while a strategy holds cash they wait for the next bullish flip.
 - Results exclude fees, slippage, and taxes. Execution at the exact signal close is a simplifying assumption, not a guarantee of achievable trading results.
 - Historical results do not predict future returns.
 
@@ -209,7 +230,7 @@ python -m pip install -r app/requirements.txt
 python -m unittest discover -s tests -v
 ```
 
-The Python tests cover strategy calculations, reinvestment, open positions, input validation, Streamlit interactions, and candle-close dates in chart tooltips. They use synthetic data and do not require Snowflake credentials or a running Airflow stack. Data transformation tests remain under `dbt/tests/` and run separately through dbt.
+The Python tests cover strategy calculations, reinvestment, recurring buys, open positions, input validation, Streamlit interactions, and candle-close dates in chart tooltips. They use synthetic data and do not require Snowflake credentials or a running Airflow stack. Data transformation tests remain under `dbt/tests/` and run separately through dbt.
 
 ## **Project Structure**
 
