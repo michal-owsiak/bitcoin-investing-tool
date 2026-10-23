@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
+from components.theme_toggle import is_dark_theme
 from logic.backtest import (
     RECURRING_FREQUENCIES,
     STRATEGIES,
@@ -24,7 +25,12 @@ STRATEGY_DESCRIPTIONS = {
     ),
 }
 DEFAULT_BACKTEST_ENTRY_DATE = '2020-08-02'
+DEFAULT_INVESTMENT = '1,000.00'
 DEFAULT_RECURRING_AMOUNT = '100.00'
+# Set by utils.url_state to a (timeframe, 'YYYY-MM-DD') entry date restored from the URL.
+PENDING_URL_ENTRY_KEY = '_backtest_entry_from_url'
+# Matches --dark-background in main.css; the grid otherwise keeps Streamlit's stock dark background.
+DARK_TABLE_BACKGROUND = '#161b22'
 
 # Runs in the parent Streamlit page: when the simulator results change, numbers count
 # from their previous values to the new ones instead of switching instantly.
@@ -236,6 +242,25 @@ def _default_entry_index(entry_options):
     return preferred_index if preferred_index is not None else max(0, len(entry_options) - 1)
 
 
+def default_entry_state_key(timeframe):
+    return f'_backtest_default_entry_{timeframe}'
+
+
+def _apply_url_entry(timeframe, entry_options):
+    # The URL leaves the entry date out while it is the default, which depends on the data.
+    st.session_state[default_entry_state_key(timeframe)] = (
+        entry_options[_default_entry_index(entry_options)][:10]
+    )
+    pending = st.session_state.get(PENDING_URL_ENTRY_KEY)
+    if not pending or pending[0] != timeframe:
+        return
+    del st.session_state[PENDING_URL_ENTRY_KEY]
+    entry_key = f'backtest_entry_v2_{timeframe}'
+    match = next((option for option in entry_options if option[:10] == pending[1]), None)
+    if match is not None and entry_key not in st.session_state:
+        st.session_state[entry_key] = match
+
+
 def get_selected_backtest_trades(price_df, timeframe):
     try:
         data = prepare_backtest_data(price_df)
@@ -247,13 +272,14 @@ def get_selected_backtest_trades(price_df, timeframe):
         return []
 
     entry_options = bullish['CLOSE_TIME'].map(lambda date: date.isoformat()).tolist()
+    _apply_url_entry(timeframe, entry_options)
     default_entry = entry_options[_default_entry_index(entry_options)]
     entry_key = f'backtest_entry_v2_{timeframe}'
     entry_date = st.session_state.get(entry_key, default_entry)
     if entry_date not in entry_options:
         entry_date = default_entry
     strategy = st.session_state.get('backtest_strategy', STRATEGIES[0])
-    investment_text = st.session_state.get('backtest_investment_text', '1,000.00')
+    investment_text = st.session_state.get('backtest_investment_text', DEFAULT_INVESTMENT)
 
     try:
         investment = parse_investment(investment_text)
@@ -281,20 +307,26 @@ def render_strategy_simulator(price_df, timeframe):
         st.info('No bullish flips are available for this timeframe.')
         return
 
+    entry_options = bullish['CLOSE_TIME'].map(lambda date: date.isoformat()).tolist()
+    _apply_url_entry(timeframe, entry_options)
+    entry_key = f'backtest_entry_v2_{timeframe}'
+    # A date restored from the URL may no longer be a bullish flip after a data refresh.
+    if entry_key in st.session_state and st.session_state[entry_key] not in entry_options:
+        del st.session_state[entry_key]
     entry_col, amount_col, strategy_col = st.columns(3)
     with entry_col:
         entry_date = st.selectbox(
             'Bullish flip date',
-            options=bullish['CLOSE_TIME'].map(lambda date: date.isoformat()).tolist(),
-            index=_default_entry_index(
-                bullish['CLOSE_TIME'].map(lambda date: date.isoformat()).tolist()
-            ),
+            options=entry_options,
+            # With a value already in Session State, a non-zero index triggers Streamlit's
+            # "default value and Session State" warning.
+            index=0 if entry_key in st.session_state else _default_entry_index(entry_options),
             format_func=lambda date: pd.Timestamp(date).strftime('%Y-%m-%d'),
-            key=f'backtest_entry_v2_{timeframe}',
+            key=entry_key,
         )
     with amount_col:
         investment_text = _render_amount_input(
-            'Investment (USDT)', 'backtest_investment_text', '1,000.00',
+            'Investment (USDT)', 'backtest_investment_text', DEFAULT_INVESTMENT,
             'backtest_investment_control', ('backtest_decrease', 'backtest_increase'), 'investment',
         )
     with strategy_col:
@@ -409,6 +441,9 @@ def render_strategy_simulator(price_df, timeframe):
             .map(lambda value: 'color: #23a88e' if value >= 0 else 'color: #f14c4a', subset=return_columns)
             .map(lambda value: 'color: #999999' if pd.isna(value) else '', subset=['Exit date', 'Exit price (USDT)'])
         )
+        dark_theme = is_dark_theme()
+        if dark_theme:
+            styled_trades = styled_trades.set_properties(**{'background-color': DARK_TABLE_BACKGROUND})
         with st.container(key='backtest_trade_details'):
             # The grid keeps its column widths when the same table gains the Avg cost column;
             # nesting it one level deeper in recurring mode makes Streamlit mount a fresh grid.
@@ -425,14 +460,18 @@ def render_strategy_simulator(price_df, timeframe):
                 'Amount (USDT)': recurring_buys['amount'],
                 'Status': recurring_buys['bought_btc'].map({True: 'Bought BTC', False: 'Held as cash'}),
             })
+            styled_recurring_buys = (
+                recurring_buys.style
+                .format('{:,.2f}', subset=['Price (USDT)', 'Amount (USDT)'])
+                .map(lambda value: 'color: #999999' if value == 'Held as cash' else '', subset=['Status'])
+            )
+            if dark_theme:
+                styled_recurring_buys = styled_recurring_buys.set_properties(
+                    **{'background-color': DARK_TABLE_BACKGROUND}
+                )
             st.markdown('**Recurring buys**')
             with st.container(key='backtest_recurring_buy_details'):
-                st.dataframe(
-                    recurring_buys.style
-                    .format('{:,.2f}', subset=['Price (USDT)', 'Amount (USDT)'])
-                    .map(lambda value: 'color: #999999' if value == 'Held as cash' else '', subset=['Status']),
-                    hide_index=True, use_container_width=True,
-                )
+                st.dataframe(styled_recurring_buys, hide_index=True, use_container_width=True)
 
     recurring_note = (
         'Recurring buys execute at the close of the first candle on or after each scheduled date; '

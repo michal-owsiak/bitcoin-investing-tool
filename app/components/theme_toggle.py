@@ -13,6 +13,7 @@ THEME_TOGGLE_SCRIPT = '''
   window.__btcThemeToggleInstalled = true;
   const BUTTON_ID = 'btc-theme-toggle';
   const STORAGE_KEY = `stActiveTheme-${window.location.pathname}-v1`;
+  const THEME_COOKIE = 'btc_theme';
   const ICON_ATTRIBUTES = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
     + 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
   const SUN_ICON = `<svg ${ICON_ATTRIBUTES}><circle cx="12" cy="12" r="4"/>`
@@ -34,8 +35,35 @@ THEME_TOGGLE_SCRIPT = '''
     return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2] > 0.38;
   }
 
+  const initialThemeCookie = readThemeCookie();
+  let reloading = false;
+
+  function readThemeCookie() {
+    return document.cookie.match(new RegExp(`(?:^|; )${THEME_COOKIE}=(\\\\w+)`))?.[1];
+  }
+
+  // The dataframe grid paints on a canvas that CSS cannot restyle, so Python reads the theme
+  // from this cookie and colors the cells itself.
+  function setThemeCookie(dark) {
+    document.cookie = `${THEME_COOKIE}=${dark ? 'dark' : 'light'}; path=/; max-age=31536000; SameSite=Lax`;
+  }
+
+  function syncThemeCookie(dark) {
+    if (reloading) return;
+    setThemeCookie(dark);
+    // Python only sees the cookies sent when the session opened, so reload once when it saw
+    // another theme. The check on the stored value avoids a reload loop if cookies are blocked.
+    if ((initialThemeCookie === 'dark') !== dark && readThemeCookie() === (dark ? 'dark' : 'light')) {
+      reloading = true;
+      window.location.reload();
+    }
+  }
+
   function syncButton(button) {
     const dark = isDarkTheme();
+    // main.css keys the dark palette on this class; the price chart sets it too, but only once it loads.
+    document.body.classList.toggle('btc-dark-theme', dark);
+    syncThemeCookie(dark);
     if (button.dataset.dark === String(dark)) return;
     button.dataset.dark = String(dark);
     button.setAttribute('aria-checked', String(dark));
@@ -57,6 +85,9 @@ THEME_TOGGLE_SCRIPT = '''
     } catch (_) {
       return;
     }
+    // Keeps the periodic sync from writing the old theme back before the reload.
+    reloading = true;
+    setThemeCookie(!dark);
     // Let the knob slide across before the reload applies the new theme.
     const button = event.currentTarget;
     button.setAttribute('aria-checked', String(!dark));
@@ -85,6 +116,10 @@ THEME_TOGGLE_SCRIPT = '''
   setInterval(mountButton, 1000);
 })();
 '''
+
+
+def is_dark_theme():
+    return st.context.cookies.get('btc_theme') == 'dark'
 
 
 def render_theme_toggle():

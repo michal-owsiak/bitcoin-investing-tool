@@ -224,9 +224,11 @@ def _backtest_marker_data(candles, trades):
 
 
 def _chart_legend_html(pi_cycle_enabled):
-    pi_cycle_legend = ''
-    if pi_cycle_enabled:
-        pi_cycle_legend = PI_CYCLE_LEGEND_HTML.replace('\\n', '').strip()
+    pi_cycle_legend = PI_CYCLE_LEGEND_HTML.replace('\\n', '').strip()
+    if not pi_cycle_enabled:
+        # Hidden rather than left out, so the legend keeps its height and the chart below
+        # doesn't move when Pi Cycle is toggled.
+        pi_cycle_legend = pi_cycle_legend.replace('<span style="', '<span style="visibility:hidden;', 1)
     return CHART_LEGEND_HTML.replace('__PI_CYCLE_LEGEND__', pi_cycle_legend)
 
 
@@ -239,26 +241,29 @@ HTML_TEMPLATE = r'''<!doctype html>
 <style>
 * { box-sizing: border-box; }
 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
-body { --chart-background: #fbfbfb; --chart-foreground: #3e4144; --chart-muted: #6b7280; --chart-grid: rgba(62,65,68,.07); --chart-border: rgba(62,65,68,.18); --tooltip-background: rgba(251,251,251,.96); --tooltip-shadow: 0 2px 8px rgba(0,0,0,.08); font-family: Geist, Arial, sans-serif; color: var(--chart-foreground); background: transparent; }
-body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --chart-muted: #aab4c2; --chart-grid: rgba(214,222,232,.09); --chart-border: rgba(214,222,232,.2); --tooltip-background: rgba(25,30,39,.98); --tooltip-shadow: 0 2px 10px rgba(0,0,0,.38); }
-#chart-shell { position: relative; width: 100%; height: calc(100% - 18px); opacity: 0; transition: opacity .15s ease-out; }
+body { --chart-background: #fbfbfb; --chart-foreground: #3e4144; --chart-muted: #6b7280; --chart-grid: rgba(62,65,68,.07); --chart-border: rgba(62,65,68,.18); font-family: Geist, Arial, sans-serif; color: var(--chart-foreground); background: transparent; }
+body.dark-theme { --chart-background: #161b22; --chart-foreground: #e6e9ef; --chart-muted: #aab4c2; --chart-grid: rgba(214,222,232,.09); --chart-border: rgba(214,222,232,.2); }
+#chart-shell { position: relative; width: 100%; background: var(--chart-background); height: calc(100% - 18px); opacity: 0; transition: opacity .15s ease-out; }
 #chart-shell.ready { opacity: 1; }
-#chart { width: 100%; height: 100%; }
+#chart { position: relative; z-index: 1; width: 100%; height: 100%; }
 #trend-fill { position: absolute; z-index: 1; pointer-events: none; overflow: hidden; }
-#tooltip { display: none; position: absolute; z-index: 3; max-width: 220px; padding: 8px 10px; border: 1px solid var(--chart-border); border-radius: 4px; background: var(--tooltip-background); box-shadow: var(--tooltip-shadow); font-size: 12px; line-height: 1.5; pointer-events: none; }
-#tooltip-date { margin-bottom: 3px; color: var(--chart-muted); }
-#tooltip-values { display: flex; flex-direction: column; gap: 2px; }
-#tooltip-values span { white-space: nowrap; }
-#tooltip-values strong { color: var(--chart-foreground); font-weight: 600; }
+#hover-band { display: none; position: absolute; z-index: 0; opacity: .16; pointer-events: none; }
+#hover-legend { display: none; position: absolute; z-index: 3; top: 4px; left: 6px; max-width: calc(100% - 90px); padding: 2px 6px; border-radius: 4px; background: color-mix(in srgb, var(--chart-background) 80%, transparent); color: var(--chart-muted); font-size: 13px; line-height: 1.5; pointer-events: none; }
+#hover-legend > div { display: flex; flex-wrap: wrap; column-gap: 12px; }
+#hover-legend span { white-space: nowrap; }
+#hover-legend strong { color: var(--chart-foreground); font-weight: 600; }
+#hover-legend .up { color: #159b87; }
+#hover-legend .down { color: #e4474d; }
 #chart-credit { position: absolute; right: 8px; bottom: 3px; z-index: 2; color: var(--chart-muted); font-size: 10px; }
 #chart-credit a { color: inherit; text-decoration: underline; }
 </style>
 </head>
 <body>
 <div id="chart-shell">
+  <div id="hover-band"></div>
   <div id="chart"></div>
   <svg id="trend-fill" aria-hidden="true"></svg>
-  <div id="tooltip"><div id="tooltip-date"></div><div id="tooltip-values"></div></div>
+  <div id="hover-legend"><div id="hover-legend-prices"></div><div id="hover-legend-details"></div></div>
   <div id="chart-credit">Charting by <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer">TradingView</a></div>
 </div>
 <script>
@@ -283,10 +288,11 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
   const rowsByTime = new Map(candles.map(row => [row.time, row]));
   const piCycleByTime = new Map(piCycleSeries.map(row => [row.time, row]));
   const container = document.getElementById('chart');
-  const tooltip = document.getElementById('tooltip');
-  const tooltipDate = document.getElementById('tooltip-date');
-  const tooltipValues = document.getElementById('tooltip-values');
+  const hoverLegend = document.getElementById('hover-legend');
+  const hoverLegendPrices = document.getElementById('hover-legend-prices');
+  const hoverLegendDetails = document.getElementById('hover-legend-details');
   const trendFill = document.getElementById('trend-fill');
+  const hoverBand = document.getElementById('hover-band');
   const bullishColor = '#159b87';
   const bearishColor = '#e4474d';
 
@@ -336,7 +342,7 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
     const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
     return {
       dark,
-      background: dark ? '#0e1117' : '#ffffff',
+      background: dark ? '#161b22' : '#ffffff',
       foreground: dark ? '#e6e9ef' : '#3e4144',
     };
   }
@@ -345,16 +351,14 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
     return host.dark ? {
       background: host.background, foreground: host.foreground || '#e6e9ef', muted: '#aab4c2',
       grid: 'rgba(214,222,232,.09)', border: 'rgba(214,222,232,.2)',
-      tooltipBackground: 'rgba(25,30,39,.98)', tooltipShadow: '0 2px 10px rgba(0,0,0,.38)',
-      bullishFill: 'rgba(21,155,135,.2)', bearishFill: 'rgba(228,71,77,.2)',
+      bullishFill: 'rgba(21,155,135,.2)', bearishFill: 'rgba(228,71,77,.2)', hoverBand: '#8b95a5',
       historicalLine: 'rgba(174,187,201,.82)', historicalLabel: '#b6c1ce',
       expectedLine: 'rgba(224,169,85,.98)', expectedLabel: '#e0a955',
       piCycle111: '#f2a15c', piCycle350: '#69b7d8', piCycleSignal: 'rgba(240,128,124,.98)',
     } : {
       background: host.background, foreground: host.foreground || '#3e4144', muted: '#6b7280',
       grid: 'rgba(62,65,68,.07)', border: 'rgba(62,65,68,.18)',
-      tooltipBackground: host.background, tooltipShadow: '0 2px 8px rgba(0,0,0,.08)',
-      bullishFill: 'rgba(21,155,135,.13)', bearishFill: 'rgba(228,71,77,.13)',
+      bullishFill: 'rgba(21,155,135,.13)', bearishFill: 'rgba(228,71,77,.13)', hoverBand: '#6b7280',
       historicalLine: 'rgba(82,96,112,.88)', historicalLabel: '#526070',
       expectedLine: 'rgba(157,96,27,.92)', expectedLabel: '#9d601b',
       piCycle111: '#d97706', piCycle350: '#2e78a8', piCycleSignal: 'rgba(212,72,80,.98)',
@@ -368,8 +372,6 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
       '--chart-muted': palette.muted,
       '--chart-grid': palette.grid,
       '--chart-border': palette.border,
-      '--tooltip-background': palette.tooltipBackground,
-      '--tooltip-shadow': palette.tooltipShadow,
     };
     for (const [name, value] of Object.entries(properties)) {
       document.body.style.setProperty(name, value);
@@ -387,9 +389,10 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
   const chart = LightweightCharts.createChart(container, {
     width: container.clientWidth,
     height: container.clientHeight,
-    layout: { background: { color: palette.background }, textColor: palette.muted, fontFamily: 'Geist, Arial, sans-serif', attributionLogo: false },
+    layout: { background: { color: 'transparent' }, textColor: palette.muted, fontFamily: 'Geist, Arial, sans-serif', attributionLogo: false },
     grid: { vertLines: { color: palette.grid }, horzLines: { color: palette.grid } },
-    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    // The hover band marks the hovered candle, so the vertical crosshair line is hidden.
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal, vertLine: { visible: false } },
     rightPriceScale: { borderColor: palette.border, scaleMargins: {top: 0.22, bottom: 0.15} },
     leftPriceScale: { visible: false, borderVisible: false, scaleMargins: {top: 0.82, bottom: 0} },
     timeScale: { borderColor: palette.border, timeVisible: false, rightOffset: 5, fixLeftEdge: true },
@@ -415,6 +418,32 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
   candleData.sort((left, right) => left.time - right.time);
   candleSeries.setData(candleData);
 
+  let hoveredCandleTime = null;
+  function setHoveredCandle(row) {
+    hoveredCandleTime = row && row.open !== null && row.open !== undefined ? row.time : null;
+  }
+
+  // A full-height band behind the hovered candle, as wide as the candle body. The chart canvas
+  // is transparent so the band can sit underneath it without tinting the candle.
+  function positionHoverBand() {
+    const timeScale = chart.timeScale();
+    const x = hoveredCandleTime === null ? null : timeScale.timeToCoordinate(hoveredCandleTime);
+    const logical = hoveredCandleTime === null ? null : timeToLogical(hoveredCandleTime);
+    if (x === null || logical === null) {
+      hoverBand.style.display = 'none';
+      return;
+    }
+    const barSpacing = timeScale.logicalToCoordinate(logical + 1) - timeScale.logicalToCoordinate(logical);
+    const width = Math.max(1, barSpacing * 0.8);
+    hoverBand.style.left = `${parseFloat(trendFill.style.left || '0') + x - width / 2}px`;
+    hoverBand.style.top = trendFill.style.top;
+    hoverBand.style.width = `${width}px`;
+    hoverBand.style.height = trendFill.style.height;
+    hoverBand.style.background = palette.hoverBand;
+    hoverBand.style.display = 'block';
+  }
+
+  const trendSeriesList = [];
   for (const [segments, color] of [
     [bullishSegments, bullishColor],
     [bearishSegments, bearishColor],
@@ -425,6 +454,7 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
         lastValueVisible: false, crosshairMarkerVisible: false,
       });
       trendSeries.setData(segment);
+      trendSeriesList.push(trendSeries);
     }
   }
 
@@ -438,6 +468,8 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
     const ma111Series = chart.addLineSeries({
       color: palette.piCycle111, lineWidth: 1, priceLineVisible: false,
       lastValueVisible: false, crosshairMarkerVisible: false,
+      // Left out of autoscaling so toggling Pi Cycle keeps the price scale unchanged.
+      autoscaleInfoProvider: () => null,
     });
     ma111Series.setData(ma111Data);
   }
@@ -445,6 +477,8 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
     const ma350x2Series = chart.addLineSeries({
       color: palette.piCycle350, lineWidth: 1, priceLineVisible: false,
       lastValueVisible: false, crosshairMarkerVisible: false,
+      // Left out of autoscaling so toggling Pi Cycle keeps the price scale unchanged.
+      autoscaleInfoProvider: () => null,
     });
     ma350x2Series.setData(ma350x2Data);
   }
@@ -476,6 +510,8 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
 
   function drawTrendFill() {
     syncOverlayBounds();
+    positionHoverBand();
+    savePriceRange();
     trendFill.replaceChildren();
     const range = chart.timeScale().getVisibleLogicalRange();
     if (!range) return;
@@ -596,19 +632,39 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
       trendFill.appendChild(label);
     }
 
+    // Leaving badges get their own lanes so the remaining badges don't shift when they finish.
     const badgeLaneRightEdges = [];
-    for (const event of tradeMarkers) {
+    const exitingLaneRightEdges = [];
+    const now = performance.now();
+    const exitingMarkers = [...markerTransitions.values()]
+      .filter(transition => !transition.entering)
+      .map(transition => transition.event);
+    for (const event of [...tradeMarkers, ...exitingMarkers]) {
       const index = timeToLogical(event.time);
       if (index === null || index < start || index > end) continue;
       const x = chart.timeScale().logicalToCoordinate(index);
       if (x === null) continue;
+      const transition = markerTransitions.get(markerKey(event));
+      const exiting = transition && !transition.entering;
+      const lanes = exiting ? exitingLaneRightEdges : badgeLaneRightEdges;
       const isBuy = event.side === 'BUY';
       const width = isBuy ? 34 : 39;
       const badgeX = Math.max(2, Math.min(x - width / 2, trendFill.clientWidth - width - 2));
-      let lane = badgeLaneRightEdges.findIndex(rightEdge => rightEdge + 4 <= badgeX);
-      if (lane < 0) lane = badgeLaneRightEdges.length;
-      badgeLaneRightEdges[lane] = badgeX + width;
+      let lane = lanes.findIndex(rightEdge => rightEdge + 4 <= badgeX);
+      if (lane < 0) lane = lanes.length;
+      lanes[lane] = badgeX + width;
       const y = 86 + lane * 20;
+      const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      if (transition) {
+        const {opacity, scale, offsetY} = markerAnimationFrame(transition, now);
+        const centerX = badgeX + width / 2;
+        const centerY = y + 9;
+        group.setAttribute('opacity', opacity);
+        group.setAttribute(
+          'transform',
+          `translate(${centerX} ${centerY + offsetY}) scale(${scale}) translate(${-centerX} ${-centerY})`,
+        );
+      }
       const badge = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       badge.setAttribute('x', badgeX);
       badge.setAttribute('y', y);
@@ -616,7 +672,7 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
       badge.setAttribute('height', 18);
       badge.setAttribute('rx', 3);
       badge.setAttribute('fill', isBuy ? bullishColor : bearishColor);
-      trendFill.appendChild(badge);
+      group.appendChild(badge);
       const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       label.setAttribute('x', badgeX + width / 2);
       label.setAttribute('y', y + 12.75);
@@ -625,8 +681,54 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
       label.setAttribute('font-size', '10');
       label.setAttribute('font-weight', '600');
       label.textContent = event.side;
-      trendFill.appendChild(label);
+      group.appendChild(label);
+      trendFill.appendChild(group);
     }
+  }
+
+  // When the strategy changes, new badges pop in and removed ones shrink away; badges present in
+  // both strategies stay still. The overlay is redrawn on every pointer move, so the animation is
+  // computed per frame rather than left to CSS.
+  const MARKER_ENTER_MS = 380;
+  const MARKER_EXIT_MS = 220;
+  const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  const markerTransitions = new Map();
+  let markerAnimationRunning = false;
+
+  function markerKey(event) {
+    return `${event.time}:${event.side}`;
+  }
+
+  function markerAnimationFrame(transition, now) {
+    const duration = transition.entering ? MARKER_ENTER_MS : MARKER_EXIT_MS;
+    const progress = Math.min(1, (now - transition.start) / duration);
+    if (!transition.entering) {
+      return {opacity: 1 - progress, scale: 1 - 0.3 * progress, offsetY: 0};
+    }
+    // Ease-out-back: a slight overshoot so the badge settles into place.
+    const overshoot = 1.7;
+    const t = progress - 1;
+    const eased = 1 + (overshoot + 1) * t ** 3 + overshoot * t ** 2;
+    return {opacity: Math.min(1, progress * 2.5), scale: 0.55 + 0.45 * eased, offsetY: -6 * (1 - eased)};
+  }
+
+  function runMarkerAnimation() {
+    if (markerAnimationRunning) return;
+    markerAnimationRunning = true;
+    const step = () => {
+      const now = performance.now();
+      for (const [key, transition] of markerTransitions) {
+        const duration = transition.entering ? MARKER_ENTER_MS : MARKER_EXIT_MS;
+        if (now - transition.start >= duration) markerTransitions.delete(key);
+      }
+      drawTrendFill();
+      if (markerTransitions.size) {
+        requestAnimationFrame(step);
+      } else {
+        markerAnimationRunning = false;
+      }
+    };
+    requestAnimationFrame(step);
   }
 
   let fillUpdateQueued = false;
@@ -642,8 +744,50 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
   container.addEventListener('pointermove', scheduleTrendFill, {passive: true});
   container.addEventListener('wheel', scheduleTrendFill, {passive: true});
   container.addEventListener('pointerup', scheduleTrendFill, {passive: true});
+
+  // Dragging the chart pans the price scale only while auto-scale is off, so it is switched off
+  // when a drag starts in the pane and back on if the drag stayed horizontal. Double-clicking
+  // the price axis restores auto-scale after a vertical pan.
+  const VERTICAL_PAN_THRESHOLD_PX = 6;
+  let dragStartY = null;
+  let autoScaleBeforeDrag = true;
+  container.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || event.pointerType === 'touch') return;
+    const paneBounds = trendFill.getBoundingClientRect();
+    if (
+      event.clientX < paneBounds.left || event.clientX > paneBounds.right
+      || event.clientY < paneBounds.top || event.clientY > paneBounds.bottom
+    ) return;
+    const priceScale = chart.priceScale('right');
+    autoScaleBeforeDrag = priceScale.options().autoScale;
+    dragStartY = event.clientY;
+    priceScale.applyOptions({autoScale: false});
+  }, {capture: true, passive: true});
+  window.addEventListener('pointerup', event => {
+    if (dragStartY === null) return;
+    if (autoScaleBeforeDrag && Math.abs(event.clientY - dragStartY) < VERTICAL_PAN_THRESHOLD_PX) {
+      chart.priceScale('right').applyOptions({autoScale: true});
+    }
+    dragStartY = null;
+  }, {passive: true});
   window.__btcSetTradeMarkers = markers => {
+    if (!reduceMotion) {
+      const start = performance.now();
+      const nextKeys = new Set(markers.map(markerKey));
+      const previousKeys = new Set(tradeMarkers.map(markerKey));
+      for (const event of markers) {
+        if (!previousKeys.has(markerKey(event))) {
+          markerTransitions.set(markerKey(event), {entering: true, start});
+        }
+      }
+      for (const event of tradeMarkers) {
+        if (!nextKeys.has(markerKey(event))) {
+          markerTransitions.set(markerKey(event), {entering: false, start, event});
+        }
+      }
+    }
     tradeMarkers = markers;
+    if (markerTransitions.size) runMarkerAnimation();
     scheduleTrendFill();
   };
 
@@ -659,7 +803,7 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
     palette = paletteForTheme(hostTheme);
     applyDocumentPalette(palette, darkTheme);
     chart.applyOptions({
-      layout: {background: {color: palette.background}, textColor: palette.muted},
+      layout: {textColor: palette.muted},
       grid: {vertLines: {color: palette.grid}, horzLines: {color: palette.grid}},
       rightPriceScale: {borderColor: palette.border},
       timeScale: {borderColor: palette.border},
@@ -668,52 +812,58 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
   }
   setInterval(syncChartTheme, 1000);
 
+  function formatPrice(value) {
+    return Number(value).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  }
+
+  // Hovered-candle values in a compact strip at the top left, so nothing covers the candles
+  // around the cursor; the hover band shows which candle they belong to.
   chart.subscribeCrosshairMove(param => {
     scheduleTrendFill();
     if (!param.time || !param.point || param.point.x < 0 || param.point.y < 0) {
-      tooltip.style.display = 'none';
+      hoverLegend.style.display = 'none';
+      setHoveredCandle(null);
+      positionHoverBand();
       return;
     }
     const row = rowsByTime.get(Number(param.time));
-    if (!row) { tooltip.style.display = 'none'; return; }
-    tooltipDate.textContent = 'Candle close: ' + row.closeDate;
-    const values = [
-      ['Open', row.open], ['High', row.high], ['Low', row.low], ['Close', row.close],
-      ['Supertrend', row.supertrend],
-      ['Trend', row.bullTrend ? 'Bullish' : row.bearTrend ? 'Bearish' : 'N/A'],
+    setHoveredCandle(row);
+    positionHoverBand();
+    if (!row || row.open === null || row.open === undefined) {
+      hoverLegend.style.display = 'none';
+      return;
+    }
+    const change = row.open ? (row.close - row.open) / row.open * 100 : 0;
+    const direction = row.close >= row.open ? 'up' : 'down';
+    hoverLegendPrices.innerHTML = [
+      `<span>${row.closeDate}</span>`,
+      ...[['O', row.open], ['H', row.high], ['L', row.low], ['C', row.close]]
+        .map(([label, value]) => `<span>${label} <strong class="${direction}">${formatPrice(value)}</strong></span>`),
+      `<span><strong class="${direction}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</strong></span>`,
+    ].join('');
+
+    const details = [
+      ['Supertrend', row.supertrend === null || row.supertrend === undefined ? null : formatPrice(row.supertrend)],
+      ['Trend', row.bullTrend ? 'Bullish' : row.bearTrend ? 'Bearish' : null],
       ['Signal', row.bullFlip ? 'Bullish flip' : row.bearFlip ? 'Bearish flip' : null],
-      ['Volume', row.volume],
+      ['Vol', row.volume === null || row.volume === undefined ? null
+        : Number(row.volume).toLocaleString('en-US', {notation: 'compact', maximumFractionDigits: 2})],
     ];
     const piCycleRow = piCycleByTime.get(Number(param.time));
     if (piCycleRow?.ma111 !== null && piCycleRow?.ma111 !== undefined) {
-      values.push(['111DMA', piCycleRow.ma111]);
+      details.push(['111DMA', formatPrice(piCycleRow.ma111)]);
     }
     if (piCycleRow?.ma350x2 !== null && piCycleRow?.ma350x2 !== undefined) {
-      values.push(['350DMA x 2', piCycleRow.ma350x2]);
+      details.push(['350DMA x 2', formatPrice(piCycleRow.ma350x2)]);
     }
     if (piCycleRow?.piTop) {
-      values.push(['Pi Cycle Top', '111DMA crossed above 350DMA x 2']);
+      details.push(['Pi Cycle Top', '111DMA crossed above 350DMA x 2']);
     }
-    tooltipValues.innerHTML = values.map(([label, value]) => {
-      if (value === null || value === undefined) return '';
-      const priceLabels = ['Open', 'High', 'Low', 'Close', 'Supertrend', '111DMA', '350DMA x 2'];
-      const formatted = priceLabels.includes(label)
-        ? Number(value).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USDT'
-        : label === 'Volume'
-          ? Number(value).toLocaleString('en-US', {maximumFractionDigits: 2})
-          : value;
-      return `<span>${label}: <strong>${formatted}</strong></span>`;
-    }).join('');
-    tooltip.style.display = 'block';
-    const gap = 12;
-    const left = param.point.x + tooltip.offsetWidth + gap <= container.clientWidth
-      ? param.point.x + gap
-      : param.point.x - tooltip.offsetWidth - gap;
-    const top = param.point.y + tooltip.offsetHeight + gap <= container.clientHeight
-      ? param.point.y + gap
-      : param.point.y - tooltip.offsetHeight - gap;
-    tooltip.style.left = left + 'px';
-    tooltip.style.top = Math.max(8, Math.min(top, container.clientHeight - tooltip.offsetHeight - 8)) + 'px';
+    hoverLegendDetails.innerHTML = details
+      .filter(([, value]) => value !== null)
+      .map(([label, value]) => `<span>${label} <strong>${value}</strong></span>`)
+      .join('');
+    hoverLegend.style.display = 'block';
   });
 
   // Keep the user's zoom/scroll across Streamlit reruns (e.g. toggling Pi Cycle), per timeframe.
@@ -730,6 +880,55 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
     } catch (_) {}
   });
 
+  // The vertical position is kept too. Lightweight Charts 4 has no setter for the price range,
+  // so a restored range is fed through autoscale for the first render and then frozen by
+  // switching auto-scale off.
+  const priceRangeStorageKey = `${rangeStorageKey}:price`;
+  let savedPriceRange = null;
+  try {
+    savedPriceRange = JSON.parse(window.sessionStorage.getItem(priceRangeStorageKey));
+  } catch (_) {}
+  let lastSavedPriceRange = null;
+  let restoringPriceRange = false;
+
+  function savePriceRange() {
+    if (restoringPriceRange) return;
+    const height = parseFloat(trendFill.style.height);
+    if (!height) return;
+    const autoScale = chart.priceScale('right').options().autoScale;
+    const from = candleSeries.coordinateToPrice(height);
+    const to = candleSeries.coordinateToPrice(0);
+    const next = JSON.stringify(autoScale ? {autoScale} : {autoScale, from, to});
+    if (next === lastSavedPriceRange || (!autoScale && (from === null || to === null))) return;
+    lastSavedPriceRange = next;
+    try {
+      window.sessionStorage.setItem(priceRangeStorageKey, next);
+    } catch (_) {}
+  }
+
+  function restorePriceRange() {
+    const {from, to} = savedPriceRange || {};
+    if (savedPriceRange?.autoScale !== false || !Number.isFinite(from) || !Number.isFinite(to) || to <= from) {
+      return;
+    }
+    // Autoscale fits the range between the scale margins, so widen it back to the full pane.
+    const {top, bottom} = chart.priceScale('right').options().scaleMargins;
+    const span = to - from;
+    const fixedRange = {priceRange: {minValue: from + span * bottom, maxValue: to - span * top}};
+    restoringPriceRange = true;
+    trendSeriesList.forEach(series => series.applyOptions({autoscaleInfoProvider: () => null}));
+    candleSeries.applyOptions({autoscaleInfoProvider: () => fixedRange});
+  }
+
+  function freezeRestoredPriceRange() {
+    if (!restoringPriceRange) return;
+    chart.priceScale('right').applyOptions({autoScale: false});
+    trendSeriesList.forEach(series => series.applyOptions({autoscaleInfoProvider: undefined}));
+    candleSeries.applyOptions({autoscaleInfoProvider: undefined});
+    restoringPriceRange = false;
+  }
+
+  restorePriceRange();
   const firstVisibleCandle = candles[Math.max(0, candles.length - 400)];
   const firstVisibleIndex = timeToLogical(firstVisibleCandle.time);
   const projectedHalvingIndexes = halvings
@@ -769,7 +968,10 @@ body.dark-theme { --chart-background: #0e1117; --chart-foreground: #e6e9ef; --ch
   // never flashes its first, mis-sized render.
   requestAnimationFrame(() => {
     syncChartSize();
-    requestAnimationFrame(() => document.getElementById('chart-shell').classList.add('ready'));
+    requestAnimationFrame(() => {
+      freezeRestoredPriceRange();
+      document.getElementById('chart-shell').classList.add('ready');
+    });
   });
 })();
 </script>

@@ -18,6 +18,7 @@ from components.dashboard_sections import (
     render_market_summary
 )
 from components.theme_toggle import render_theme_toggle
+from utils.url_state import restore_widget_state, save_widget_state
 
 st.set_page_config(
     page_title='BIT — Bitcoin Investing Tool',
@@ -27,6 +28,7 @@ st.set_page_config(
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 load_css('../styles/main.css')
+restore_widget_state()
 render_theme_toggle()
 
 
@@ -126,3 +128,5 @@ st.markdown(
     ''',
     unsafe_allow_html=True
 )
+
+save_widget_state()
