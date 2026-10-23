@@ -12,7 +12,11 @@ import sys
 sys.path.insert(0, {APP_PATH!r})
 import pandas as pd
 import streamlit as st
-from components.backtest_calculator import render_backtest_calculator
+from components.strategy_simulator import (
+    _default_entry_index,
+    get_selected_backtest_trades,
+    render_strategy_simulator,
+)
 
 timeframe = st.selectbox('Timeframe', ['1W', '1D'], key='test_timeframe')
 data = pd.DataFrame({{
@@ -24,9 +28,11 @@ data = pd.DataFrame({{
 }})
 if timeframe == '1D':
     data = data.iloc[:2]
+selected_trades = get_selected_backtest_trades(data, timeframe)
+st.session_state['chart_trade_count'] = len(selected_trades)
 chart_col, spacer_col, whale_col = st.columns([4, 0.2, 0.8])
 with chart_col:
-    render_backtest_calculator(data, timeframe)
+    render_strategy_simulator(data, timeframe)
 '''
 
 
@@ -35,9 +41,26 @@ class BacktestUITests(unittest.TestCase):
         app = AppTest.from_string(APP).run()
         self.assertFalse(app.exception)
         if latest_entry:
-            app.selectbox(key='backtest_entry_1W').select_index(0).run()
+            app.selectbox(key='backtest_entry_v2_1W').select_index(0).run()
             self.assertFalse(app.exception)
         return app
+
+    def test_default_entry_prefers_august_2020_when_available(self):
+        app_source = APP.replace(
+            "pd.date_range('2024-01-02', periods=4)",
+            "pd.to_datetime(['2020-08-02', '2020-08-03', '2020-08-04', '2020-08-05'])",
+        )
+        app = AppTest.from_string(app_source).run()
+        self.assertFalse(app.exception)
+        self.assertEqual(
+            app.selectbox(key='backtest_entry_v2_1W').value,
+            '2020-08-02T00:00:00+00:00',
+        )
+
+    def test_cagr_shows_na_for_period_shorter_than_one_year(self):
+        app = self.app(latest_entry=False)
+        self.assertEqual(app.metric[1].label, 'Annualized return (CAGR)')
+        self.assertEqual(app.metric[1].value, 'N/A (<1Y)')
 
     def test_amount_and_entry_update_hold_result(self):
         app = self.app()
@@ -46,31 +69,42 @@ class BacktestUITests(unittest.TestCase):
         app.text_input[0].set_value('2000').run()
         self.assertEqual(app.text_input[0].value, '2,000.00')
         self.assertEqual(app.metric[0].value, '3,000.00')
-        app.selectbox(key='backtest_entry_1W').select_index(1).run()
+        app.selectbox(key='backtest_entry_v2_1W').select_index(1).run()
         self.assertFalse(app.exception)
         self.assertEqual(app.metric[0].value, '3,600.00')
 
-    def test_strategy_order_and_follow_all_signals_default(self):
+    def test_strategy_order_and_never_sell_at_loss_default(self):
         app = self.app(latest_entry=False)
         strategy = app.selectbox(key='backtest_strategy')
         self.assertEqual(strategy.options, [
-            'Follow all signals', 'Hold until today', 'Exit on next bearish flip',
+            'Follow signals, never sell at a loss', 'Follow all signals',
+            'Hold until today', 'Exit on next bearish flip',
         ])
-        self.assertEqual(strategy.value, 'Follow all signals')
-        self.assertEqual(app.selectbox(key='backtest_entry_1W').value, '2024-01-02T00:00:00+00:00')
+        self.assertEqual(strategy.value, 'Follow signals, never sell at a loss')
+        self.assertEqual(app.selectbox(key='backtest_entry_v2_1W').value, '2024-01-02T00:00:00+00:00')
         self.assertFalse(app.exception)
         self.assertEqual(app.metric[0].value, '2,250.00')
+
+    def test_chart_trade_highlights_follow_backtest_selection(self):
+        app = self.app(latest_entry=False)
+        self.assertEqual(app.session_state['chart_trade_count'], 2)
+
+        app.selectbox(key='backtest_entry_v2_1W').select_index(0).run()
+        self.assertEqual(app.session_state['chart_trade_count'], 1)
+
+        app.selectbox(key='backtest_strategy').select('Hold until today').run()
+        self.assertEqual(app.session_state['chart_trade_count'], 1)
 
     def test_changing_strategy_preserves_selected_entry_date(self):
         app = self.app(latest_entry=False)
         for entry_index in [1, 0]:
-            app.selectbox(key='backtest_entry_1W').select_index(entry_index).run()
-            entry_date = app.selectbox(key='backtest_entry_1W').value
+            app.selectbox(key='backtest_entry_v2_1W').select_index(entry_index).run()
+            entry_date = app.selectbox(key='backtest_entry_v2_1W').value
             for strategy in ['Hold until today', 'Exit on next bearish flip', 'Follow all signals']:
                 with self.subTest(entry_index=entry_index, strategy=strategy):
                     app.selectbox(key='backtest_strategy').select(strategy).run()
                     self.assertFalse(app.exception)
-                    self.assertEqual(app.selectbox(key='backtest_entry_1W').value, entry_date)
+                    self.assertEqual(app.selectbox(key='backtest_entry_v2_1W').value, entry_date)
 
     def test_investment_accepts_and_formats_grouped_amounts(self):
         app = self.app()
@@ -160,7 +194,7 @@ class BacktestUITests(unittest.TestCase):
 
     def test_table_shows_trade_and_compounded_returns(self):
         app = self.app()
-        app.selectbox(key='backtest_entry_1W').select_index(1).run()
+        app.selectbox(key='backtest_entry_v2_1W').select_index(1).run()
         app.selectbox(key='backtest_strategy').select('Follow all signals').run()
         self.assertFalse(app.exception)
         displayed = pyarrow.ipc.open_stream(app.dataframe[0].proto.styler.display_values).read_pandas()
@@ -171,7 +205,7 @@ class BacktestUITests(unittest.TestCase):
 
     def test_table_formats_negative_returns(self):
         app = AppTest.from_string(APP.replace('120., 180.', '120., 60.')).run()
-        app.selectbox(key='backtest_entry_1W').select_index(0).run()
+        app.selectbox(key='backtest_entry_v2_1W').select_index(0).run()
         self.assertFalse(app.exception)
         displayed = pyarrow.ipc.open_stream(app.dataframe[0].proto.styler.display_values).read_pandas()
         self.assertEqual(displayed.iloc[0]['Trade return (%)'], '-50.00%')
@@ -192,13 +226,25 @@ render_market_summary({
 })
 ''').run()
         self.assertFalse(app.exception)
-        summary = '\n'.join(item.value for item in app.markdown if 'font-size:12px' in item.value)
+        summary = '\n'.join(
+            item.value for item in app.markdown
+            if 'font-size:12px' in item.value or 'market-summary-label' in item.value
+        )
         self.assertIn('Trend', summary)
         self.assertIn('Change', summary)
         self.assertIn('Distance to Supertrend', summary)
         self.assertEqual(summary.count('font-size:17px;'), 3)
-        self.assertTrue(any('font-size:13px;' in item.value for item in app.markdown))
+        self.assertNotIn('color:#3a3a3a', summary)
+        self.assertIn('.market-summary-detail {', (Path(APP_PATH) / 'styles' / 'main.css').read_text())
         css = (Path(APP_PATH) / 'styles' / 'main.css').read_text()
+        self.assertIn('font-size: 13px;', css)
+        self.assertIn("[data-testid='stTooltipIcon'] {\n    transform: translateY(4px);", css)
+        self.assertIn('opacity: 0.9;', css)
+        self.assertIn('opacity: 0.82;', css)
+        self.assertIn('body.btc-dark-theme [data-testid="stMetricLabel"]', css)
+        self.assertIn("label[data-baseweb='checkbox']:has(input[aria-checked='true'])", css)
+        self.assertIn('--pi-cycle-toggle-off: #e4474d;', css)
+        self.assertIn('--pi-cycle-toggle-on: #159b87;', css)
         self.assertIn('.st-key-market_summary h3 {\n    font-size: 16.15px !important;', css)
         self.assertNotIn('.st-key-market_summary p', css)
         self.assertNotIn('.st-key-market_summary [data-testid="stMetric', css)
@@ -213,7 +259,7 @@ render_market_summary({
 
     def test_exit_and_follow_display_expected_results(self):
         app = self.app()
-        app.selectbox(key='backtest_entry_1W').select_index(1).run()
+        app.selectbox(key='backtest_entry_v2_1W').select_index(1).run()
         app.selectbox(key='backtest_strategy').select('Exit on next bearish flip').run()
         self.assertEqual(app.metric[0].value, '1,500.00')
         self.assertTrue(any('Exit: **2024-01-03** at **150.00 USDT**' in item.value for item in app.caption))
@@ -229,9 +275,9 @@ render_market_summary({
             "pd.date_range('2024-01-01 23:59:59.999', periods=4)",
         )).run()
         self.assertFalse(app.exception)
-        self.assertEqual(app.selectbox(key='backtest_entry_1W').label, 'Bullish flip date')
-        self.assertEqual(app.selectbox(key='backtest_entry_1W').options, ['2024-01-03', '2024-01-01'])
-        app.selectbox(key='backtest_entry_1W').select_index(1).run()
+        self.assertEqual(app.selectbox(key='backtest_entry_v2_1W').label, 'Bullish flip date')
+        self.assertEqual(app.selectbox(key='backtest_entry_v2_1W').options, ['2024-01-03', '2024-01-01'])
+        app.selectbox(key='backtest_entry_v2_1W').select_index(1).run()
         app.selectbox(key='backtest_strategy').select('Exit on next bearish flip').run()
         self.assertFalse(app.exception)
         self.assertEqual(app.metric[0].value, '1,500.00')
@@ -248,7 +294,7 @@ render_market_summary({
                 self.assertEqual(len(app.dataframe), 1)
                 self.assertTrue(app.expander[0].proto.expanded)
                 self.assertEqual(app.dataframe[0].value.iloc[0]['Status'], 'Open')
-                app.selectbox(key='backtest_entry_1W').select_index(1).run()
+                app.selectbox(key='backtest_entry_v2_1W').select_index(1).run()
                 self.assertFalse(app.exception)
                 self.assertEqual(len(app.dataframe), 1)
                 self.assertTrue(app.expander[0].proto.expanded)
@@ -257,7 +303,7 @@ render_market_summary({
 
     def test_strategy_prefix_and_compact_investment_details(self):
         app = self.app()
-        app.selectbox(key='backtest_entry_1W').select_index(1).run()
+        app.selectbox(key='backtest_entry_v2_1W').select_index(1).run()
         for strategy in ['Hold until today', 'Exit on next bearish flip', 'Follow all signals']:
             with self.subTest(strategy=strategy):
                 app.selectbox(key='backtest_strategy').select(strategy).run()
@@ -289,7 +335,7 @@ render_market_summary({
                 app = AppTest.from_string(APP.replace(
                     '120., 180.', f'120., {latest_price}.',
                 )).run()
-                app.selectbox(key='backtest_entry_1W').select_index(0).run()
+                app.selectbox(key='backtest_entry_v2_1W').select_index(0).run()
                 self.assertFalse(app.exception)
                 results = [item.value for item in app.markdown if f'color:{color};' in item.value]
                 self.assertEqual(len(results), 2)
@@ -301,12 +347,80 @@ render_market_summary({
         app.selectbox(key='test_timeframe').select('1D').run()
         self.assertFalse(app.exception)
         self.assertEqual(app.metric[0].value, '1,500.00')
-        self.assertEqual(len(app.selectbox(key='backtest_entry_1D').options), 1)
+        self.assertEqual(len(app.selectbox(key='backtest_entry_v2_1D').options), 1)
+
+    def test_recurring_buys_toggle_adds_scheduled_buys(self):
+        app = AppTest.from_string(
+            APP.replace(
+                "pd.date_range('2024-01-01', periods=4)",
+                "pd.date_range('2024-01-01', periods=4, freq='7D')",
+            ).replace(
+                "pd.date_range('2024-01-02', periods=4)",
+                "pd.date_range('2024-01-02', periods=4, freq='7D')",
+            )
+        ).run()
+        app.selectbox(key='backtest_entry_v2_1W').select_index(1).run()
+        app.selectbox(key='backtest_strategy').select('Hold until today').run()
+        self.assertEqual(app.metric[0].value, '1,800.00')
+        # The fields stay rendered (CSS hides them) and are ignored until the checkbox is on.
+        app.text_input(key='backtest_recurring_amount_text').set_value('500').run()
+        self.assertEqual(app.metric[0].value, '1,800.00')
+        self.assertEqual(app.metric[1].label, 'Annualized return (CAGR)')
+        app.text_input(key='backtest_recurring_amount_text').set_value('100').run()
+
+        recurring = app.checkbox(key='backtest_recurring_enabled')
+        self.assertEqual(recurring.label, 'Add recurring buys')
+        recurring.check().run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.selectbox(key='backtest_recurring_frequency').options, [
+            'Weekly', 'Every 2 weeks', 'Monthly',
+        ])
+        self.assertEqual(app.text_input(key='backtest_recurring_amount_text').value, '100.00')
+        # 10 BTC + 100 USDT bought at 150, 120 and 180, all valued at 180.
+        self.assertEqual(app.metric[0].value, '2,170.00')
+        self.assertEqual(app.metric[1].label, 'Annualized return (IRR)')
+        self.assertTrue(any(
+            'Invested: **1,300.00 USDT** (1,000.00 initial + 300.00 recurring)' in item.value
+            for item in app.caption
+        ))
+        self.assertIn('Recurring buys: **3**', [item.value for item in app.caption])
+        self.assertEqual(app.dataframe[0].value['Status'].tolist(), ['Open'])
+        recurring_buys = app.dataframe[1].value
+        self.assertEqual(recurring_buys['Date'].tolist(), ['2024-01-09', '2024-01-16', '2024-01-23'])
+        self.assertEqual(recurring_buys['Price (USDT)'].tolist(), [150.0, 120.0, 180.0])
+        self.assertEqual(recurring_buys['Status'].tolist(), ['Bought BTC'] * 3)
+
+        app.selectbox(key='backtest_recurring_frequency').select('Every 2 weeks').run()
+        self.assertEqual(app.metric[0].value, '1,950.00')
+
+        app.button(key='backtest_recurring_increase').click().run()
+        self.assertEqual(app.text_input(key='backtest_recurring_amount_text').value, '200.00')
+        self.assertEqual(app.metric[0].value, '2,100.00')
+        app.button(key='backtest_recurring_decrease').click().run()
+        self.assertEqual(app.text_input(key='backtest_recurring_amount_text').value, '100.00')
+        self.assertEqual(app.text_input(key='backtest_investment_text').value, '1,000.00')
+
+        app.text_input(key='backtest_recurring_amount_text').set_value('250').run()
+        app.checkbox(key='backtest_recurring_enabled').uncheck().run()
+        self.assertEqual(app.metric[0].value, '1,800.00')
+        app.checkbox(key='backtest_recurring_enabled').check().run()
+        self.assertEqual(app.selectbox(key='backtest_recurring_frequency').value, 'Every 2 weeks')
+        self.assertEqual(app.text_input(key='backtest_recurring_amount_text').value, '250.00')
+        self.assertEqual(app.metric[0].value, '2,175.00')
+
+        app.text_input(key='backtest_recurring_amount_text').set_value('abc').run()
+        self.assertEqual(len(app.warning), 1)
+        self.assertEqual(len(app.metric), 0)
+
+        app.checkbox(key='backtest_recurring_enabled').uncheck().run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.metric[0].value, '1,800.00')
+        self.assertEqual(app.metric[1].label, 'Annualized return (CAGR)')
 
     def test_no_bullish_flips(self):
         app = AppTest.from_string(APP.replace(
-            "render_backtest_calculator(data, timeframe)",
-            "data['SIGNAL_FLIP_UP'] = False\nrender_backtest_calculator(data, timeframe)",
+            "render_strategy_simulator(data, timeframe)",
+            "data['SIGNAL_FLIP_UP'] = False\nrender_strategy_simulator(data, timeframe)",
         )).run()
         self.assertFalse(app.exception)
         self.assertIn('No bullish flips', app.info[0].value)
@@ -314,8 +428,8 @@ render_market_summary({
 
     def test_empty_data(self):
         app = AppTest.from_string(APP.replace(
-            'render_backtest_calculator(data, timeframe)',
-            'render_backtest_calculator(data.iloc[:0], timeframe)',
+            'render_strategy_simulator(data, timeframe)',
+            'render_strategy_simulator(data.iloc[:0], timeframe)',
         )).run()
         self.assertFalse(app.exception)
         self.assertIn('No price data', app.info[0].value)

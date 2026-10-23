@@ -1,16 +1,27 @@
-## **Bitcoin Investing Tool**
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./assets/brand/banner-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="./assets/brand/banner-light.png">
+    <img src="./assets/brand/banner-light.png" alt="BIT — Bitcoin Investing Tool" width="1000">
+  </picture>
+</p>
 
-An end-to-end Bitcoin analytics project combining an incremental ELT pipeline with a deployed Streamlit application for long-term market analysis.
+<p align="center">
+  <code>Snowflake</code> · <code>dbt</code> · <code>Airflow</code> · <code>Docker</code> · <code>Streamlit</code>
+</p>
+<br/>
 
-https://bitcoin-investing-tool.com
+BIT (Bitcoin Investing Tool) is a Bitcoin analytics platform that combines an incremental ELT pipeline with a Streamlit application for market analysis and Supertrend-based strategy backtesting.
+<br/>
+<br/>
+<p align="center">
+  <a href="https://bitcoin-investing-tool.com"><strong>Live App →</strong></a>
+</p>
 
-`Snowflake` · `dbt` · `Airflow` · `Docker` · `Streamlit`
-
-------------------------------------------------------------------------
 
 ## **Architecture**
 
-![Architecture](./architecture.jpg)
+![Architecture](./assets/diagrams/architecture.jpg)
 
 ------------------------------------------------------------------------
 
@@ -34,7 +45,7 @@ reloads.
 ------------------------------------------------------------------------
 ## **Application**
 
-![Application](./app_screenshot.jpg)
+![Application](./assets/screenshots/app_screenshot.jpg)
 
 ### **Key Components**
 
@@ -48,19 +59,25 @@ reloads.
   - Helps identify long-term trend direction and potential reversal points
   - Used to explore historical market cycles and simulate signal-based investment strategies
 
-- **Backtest Reward Calculator**
+- **Supertrend Strategy Simulator**
   - Simulates an investment from a selected historical bullish flip on the chart's weekly or daily timeframe
-  - Compares three strategies using existing Supertrend signals, without recalculating the indicator
+  - Compares four strategies using existing Supertrend signals, without recalculating the indicator
   - Shows portfolio value, profit/loss, percentage return, and individual trade details
+  - Optionally adds recurring buys (weekly, every 2 weeks, or monthly) on top of the initial investment
 
-- **Market Summary**
-  - Aggregated view of market metrics
-  - Provides quick situational awareness for the current market state
+- **Pi Cycle Top Indicator (Optional)**
+  - Overlays the 111-day simple moving average and twice the 350-day simple moving average, calculated from daily BTC closes
+  - Marks historical upward crossovers as potential cycle-top signals; it is a historical risk indicator, not a price forecast or guarantee
 
 - **Whale Inflow Monitoring**
   - Tracks large-volume movements on the blockchain
   - Based on on-chain data
   - Uses the latest available on-chain data to monitor large BTC inflows
+
+- **Market Summary**
+  - Aggregated view of market metrics
+  - Provides quick situational awareness for the current market state
+
 
 ### **Backtest Strategies**
 
@@ -68,19 +85,40 @@ Select a bullish flip date, enter an investment amount in USDT, and choose a str
 
 | Strategy | Simulation |
 | --- | --- |
+| Follow signals, never sell at a loss | Follow all signals, but skip any bearish flip that closes below the current entry price and keep holding until a later bearish flip closes at or above it. Bullish flips while holding are ignored. |
 | Follow all signals | Buy on bullish flips, sell on bearish flips, and reinvest the entire proceeds at each subsequent entry. Value any remaining BTC at the latest available close; otherwise retain cash. |
 | Hold until today | Buy at the selected bullish flip and hold until the latest available candle close. |
 | Exit on next bearish flip | Buy at the selected bullish flip and sell at the first subsequent bearish flip. If no exit signal exists, keep the position open and value it at the latest available close. |
 
-**Follow all signals** and the oldest available bullish flip are selected by default. Switching strategies preserves the selected entry date so results can be compared over the same period.
+**Follow signals, never sell at a loss** and the oldest available bullish flip are selected by default. Switching strategies preserves the selected entry date so results can be compared over the same period.
 
 The trade table includes entry and exit dates and prices, portfolio value, position status, **Trade return (%)**, and **Cumulative return (%)**. Cumulative return is measured against the initial investment and reflects reinvestment, rather than adding individual trade percentages. Returns on open positions are unrealized.
+
+### **Recurring Buys**
+
+Click the green **+** below the strategy selector to add recurring buys, then choose a frequency (**Weekly**, **Every 2 weeks**, or **Monthly**) and an amount per buy in USDT. Recurring buys work with every strategy:
+
+| Strategy state | Recurring buy |
+| --- | --- |
+| Holding BTC | Buys BTC at the close of the scheduled candle. |
+| Holding cash after a bearish exit | Adds the amount to cash, which is invested together with the rest at the next bullish flip. |
+| **Exit on next bearish flip** after the exit | Stops; no further buys are made. |
+
+With recurring buys enabled:
+
+- Buys are scheduled by calendar date from the entry date and execute at the first candle closing on or after each date, so weekly and daily timeframes follow the same schedule.
+- Profit/loss and return are measured against the total amount invested (initial investment plus all recurring buys).
+- The annualized return switches from CAGR to a money-weighted return (IRR), which counts each buy only from the date it was made.
+- **Follow signals, never sell at a loss** compares bearish flips against the average cost of all BTC bought, not only the first entry price.
+- The trade table adds an **Avg cost (USDT)** column, trade returns are measured against that average cost, and a separate **Recurring buys** table lists every buy with its date, price, amount, and whether it bought BTC or was held as cash.
+- Frequency and amount are kept when the section is collapsed and reopened.
 
 **Simulation assumptions:**
 
 - Entries and exits use the signal candle's closing price (`CLOSE`); dates refer to candle closes (`CLOSE_TIME`) in UTC.
 - Only history loaded for the selected timeframe is available. "Today" means the latest available close, not a live market quote.
 - The strategy is long-only and uses the full available capital for each purchase, including fractional BTC.
+- Recurring buys execute at the scheduled candle's closing price; while a strategy holds cash they wait for the next bullish flip.
 - Results exclude fees, slippage, and taxes. Execution at the exact signal close is a simplifying assumption, not a guarantee of achievable trading results.
 - Historical results do not predict future returns.
 
@@ -196,7 +234,7 @@ python -m pip install -r app/requirements.txt
 python -m unittest discover -s tests -v
 ```
 
-The Python tests cover strategy calculations, reinvestment, open positions, input validation, Streamlit interactions, and candle-close dates in chart tooltips. They use synthetic data and do not require Snowflake credentials or a running Airflow stack. Data transformation tests remain under `dbt/tests/` and run separately through dbt.
+The Python tests cover strategy calculations, reinvestment, recurring buys, open positions, input validation, Streamlit interactions, and candle-close dates in chart tooltips. They use synthetic data and do not require Snowflake credentials or a running Airflow stack. Data transformation tests remain under `dbt/tests/` and run separately through dbt.
 
 ## **Project Structure**
 
@@ -236,6 +274,11 @@ bitcoin-investing-tool/
 │   ├── services/                # Data access layer (Snowflake)
 │   ├── styles/                  # Styling (CSS)
 │   └── streamlit_app.py         # Entry point
+│
+├── assets/                    # Shared visual assets
+│   ├── brand/                 # Application icons
+│   ├── diagrams/              # Architecture diagrams
+│   └── screenshots/           # Application screenshots
 │
 ├── shared/                    # Shared utilities (Snowflake client)
 │
