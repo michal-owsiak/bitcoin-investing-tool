@@ -37,7 +37,7 @@ def build_whale_inflow_monitor(whales_df: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         xaxis_title='Inflow (BTC)',
         yaxis_title='',
-        height=450,
+        height=400,
         font=dict(
             family='Archivo',
             size=12
@@ -47,7 +47,8 @@ def build_whale_inflow_monitor(whales_df: pd.DataFrame) -> go.Figure:
             automargin=True
         ),
         bargap=0.3,
-  
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
     )
 
     fig.update_xaxes(
