@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="./assets/brand/banner-dark.png" alt="Banner" width="1000">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./assets/brand/banner-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="./assets/brand/banner-light.png">
+    <img src="./assets/brand/banner-light.png" alt="BIT — Bitcoin Investing Tool" width="1000">
+  </picture>
 </p>
 
 <p align="center">
