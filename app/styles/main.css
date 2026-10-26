@@ -8,6 +8,117 @@
     font-family: 'Geist', sans-serif !important;
 }
 
+iframe[data-testid='stIFrame'] {
+    width: 100% !important;
+}
+
+/* Laptop widths: shrink the price chart to give the whale monitor column more room. */
+@media (min-width: 641px) and (max-width: 1800px) {
+    [data-testid='stHorizontalBlock']:has(.whale-monitor-heading) > [data-testid='stColumn']:nth-child(1) {
+        width: calc(73% - 1rem) !important;
+        flex: 1 1 calc(73% - 1rem) !important;
+    }
+
+    [data-testid='stHorizontalBlock']:has(.whale-monitor-heading) > [data-testid='stColumn']:nth-child(2) {
+        width: calc(2% - 1rem) !important;
+        flex: 1 1 calc(2% - 1rem) !important;
+    }
+
+    [data-testid='stHorizontalBlock']:has(.whale-monitor-heading) > [data-testid='stColumn']:nth-child(3) {
+        width: calc(25% - 1rem) !important;
+        flex: 1 1 calc(25% - 1rem) !important;
+    }
+
+    iframe[data-testid='stIFrame'] {
+        height: clamp(460px, 34vw, 678px) !important;
+    }
+}
+
+[data-testid='stDecoration'] {
+    background-image: linear-gradient(90deg, #e4474d, #159b87) !important;
+}
+
+:root {
+    --pi-cycle-111-color: #d97706;
+    --pi-cycle-350-color: #2e78a8;
+    --pi-cycle-signal-color: #d44850;
+    --pi-cycle-toggle-off: #e4474d;
+    --pi-cycle-toggle-on: #159b87;
+}
+
+body.btc-dark-theme {
+    --pi-cycle-111-color: #f2a15c;
+    --pi-cycle-350-color: #69b7d8;
+    --pi-cycle-signal-color: #f0807c;
+    --pi-cycle-toggle-off: #e4474d;
+    --pi-cycle-toggle-on: #35c6a0;
+    --dark-background: #161b22;
+    --dark-surface: #1f2630;
+    --dark-border: #2d3540;
+}
+
+/* Streamlit 1.40 cannot configure its dark theme, so the graphite palette is applied here.
+   st.dataframe paints on a canvas and keeps the stock dark background. */
+body.btc-dark-theme [data-testid="stApp"],
+body.btc-dark-theme [data-testid="stHeader"] {
+    background-color: var(--dark-background) !important;
+}
+
+/* Cache spinners ("Fetching whale inflow...") fade out on a gradient of the stock background. */
+body.btc-dark-theme .stCacheSpinner {
+    background: linear-gradient(
+        to bottom, var(--dark-background) 0%, var(--dark-background) 80%, transparent 100%
+    ) !important;
+}
+
+body.btc-dark-theme [data-testid="stSidebar"],
+body.btc-dark-theme [data-baseweb="select"] > div,
+body.btc-dark-theme [data-baseweb="input"],
+body.btc-dark-theme [data-baseweb="base-input"],
+body.btc-dark-theme [data-baseweb="input"] input,
+body.btc-dark-theme [data-baseweb="popover"] ul,
+body.btc-dark-theme [data-testid="stBaseButton-secondary"],
+body.btc-dark-theme [data-testid="stBaseButton-segmented_control"] {
+    background-color: var(--dark-surface) !important;
+}
+
+body.btc-dark-theme [data-testid="stBaseButton-secondary"],
+body.btc-dark-theme [data-testid="stBaseButton-segmented_control"],
+body.btc-dark-theme [data-testid="stExpander"] details {
+    border-color: var(--dark-border) !important;
+}
+
+.st-key-show_pi_cycle_top [data-testid='stCheckbox'] {
+    transform: translate(17px, 22px);
+}
+
+.st-key-show_pi_cycle_top [data-testid='stCheckbox'] > label[data-baseweb='checkbox'] {
+    width: max-content !important;
+    margin-left: auto;
+}
+
+.st-key-show_pi_cycle_top label[data-baseweb='checkbox'] > div:first-child {
+    background-color: var(--pi-cycle-toggle-off) !important;
+    border-color: var(--pi-cycle-toggle-off) !important;
+}
+
+.st-key-show_pi_cycle_top label[data-baseweb='checkbox']:has(input[aria-checked='true']) > div:first-child {
+    background-color: var(--pi-cycle-toggle-on) !important;
+    border-color: var(--pi-cycle-toggle-on) !important;
+}
+
+.st-key-show_pi_cycle_top [data-testid='stMarkdownContainer'] p {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    transform: translateY(4px);
+    white-space: nowrap;
+}
+
+.st-key-show_pi_cycle_top [data-testid='stTooltipIcon'] {
+    transform: translateY(4px);
+}
+
 .block-container {
     padding-top: 2rem !important;
 }
@@ -15,19 +126,63 @@
 h1 {
     font-family: 'Archivo', sans-serif !important;
     letter-spacing: -2px;
-    font-size: 36px !important;
+    font-size: 35px !important;
     font-weight: 800 !important;
     padding-bottom: 2rem !important;
+    padding-top: 6px !important;
 }
 
 h3 {
     font-family: 'Archivo', sans-serif !important;
-    font-size: 19px !important;
+    font-size: 22px !important;
     font-weight: 800 !important;
 }
 
-h3#backtest-reward-calculator {
+h3#strategy_simulator {
     font-size: 22px !important;
+}
+
+.whale-monitor-heading {
+    padding-top: 23px;
+    margin: 0 0 16px;
+    text-align: center;
+}
+
+.whale-monitor-heading h3 {
+    font-size: 17px !important;
+    margin: 0 !important;
+    text-align: center;
+}
+
+.whale-top-inflows-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 5px;
+}
+
+.whale-top-inflows-heading h4 {
+    font-size: 14px !important;
+    margin: 0 !important;
+}
+
+.whale-top-inflows-heading span {
+    color: inherit;
+    opacity: 0.85;
+    font-size: 12px;
+}
+
+.market-summary-detail {
+    color: inherit;
+    font-size: 13px;
+    line-height: 1.4;
+    opacity: 0.9;
+}
+
+.market-summary-label {
+    color: inherit;
+    font-size: 12px;
+    opacity: 0.82;
 }
 
 h4 {
@@ -72,30 +227,298 @@ section[data-testid='stSidebar'] div[role='radiogroup'] label p {
     font-weight: 600;
 }
 
+body.btc-dark-theme [data-testid="stMetricLabel"],
+body.btc-dark-theme [data-testid="stMetricLabel"] *,
+body.btc-dark-theme [data-testid="stMetricValue"],
+body.btc-dark-theme [data-testid="stMetricValue"] * {
+    color: #e6e9ef !important;
+    opacity: 1 !important;
+}
+
 .st-key-market_summary h3 {
     font-size: 16.15px !important;
 }
 
-[data-testid="stExpander"]:has(.st-key-backtest_trade_details) summary:hover {
-    color: #3e4144 !important;
-    background-color: rgba(62, 65, 68, 0.04);
-}
-
-.st-key-backtest_trade_details [data-testid="stElementToolbarButton"]:has(button[aria-label="Search"]) {
+.st-key-backtest_count_up {
     display: none;
 }
 
-.st-key-backtest_investment_control {
+.st-key-theme_toggle {
+    display: none;
+}
+
+#btc-theme-toggle {
+    position: relative;
+    width: 52px;
+    height: 28px;
+    margin-right: 6px;
+    padding: 0;
+    border: 1px solid rgba(128, 128, 128, 0.3);
+    border-radius: 999px;
+    background-color: rgba(128, 128, 128, 0.12);
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+#btc-theme-toggle:hover {
+    border-color: rgba(128, 128, 128, 0.55);
+}
+
+.btc-theme-toggle-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background-color: #ffffff;
+    color: #d97706;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.btc-theme-toggle-knob svg {
+    width: 14px;
+    height: 14px;
+}
+
+#btc-theme-toggle[aria-checked='true'] .btc-theme-toggle-knob {
+    transform: translateX(24px);
+    background-color: #262e39;
+    color: #e6e9ef;
+}
+
+[data-testid="stExpander"]:has(.st-key-backtest_trade_details) summary:hover {
+    color: inherit !important;
+    background-color: rgba(128, 128, 128, 0.08);
+}
+
+.st-key-backtest_trade_details [data-testid="stElementToolbarButton"]:has(button[aria-label="Search"]),
+.st-key-backtest_recurring_buy_details [data-testid="stElementToolbarButton"]:has(button[aria-label="Search"]) {
+    display: none;
+}
+
+.st-key-backtest_recurring_toggle label[data-baseweb='checkbox'] {
+    position: relative;
+    align-items: center;
+    gap: 0;
+    width: max-content;
+    cursor: pointer;
+}
+
+/* Registered so the hover wave and the green-to-red tint animate independently. */
+@property --recurring-wave {
+    syntax: '<length>';
+    inherits: false;
+    initial-value: -36px;
+}
+
+@property --recurring-tint {
+    syntax: '<percentage>';
+    inherits: false;
+    initial-value: 0%;
+}
+
+@keyframes btc-recurring-wave {
+    from {
+        --recurring-wave: -36px;
+    }
+    to {
+        --recurring-wave: 40px;
+    }
+}
+
+@keyframes btc-recurring-diagonal-wave {
+    from {
+        background-position: 100% 100%;
+    }
+    to {
+        background-position: 0% 0%;
+    }
+}
+
+/* The checkbox square becomes a green plus that turns into a red minus when checked. */
+.st-key-backtest_recurring_toggle label[data-baseweb='checkbox'] > span:first-child {
+    position: relative;
+    top: 0 !important;
+    left: 0 !important;
+    width: 44px !important;
+    height: 44px !important;
+    margin: 0 8px 0 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.st-key-backtest_recurring_toggle label[data-baseweb='checkbox'] > span:first-child::before,
+.st-key-backtest_recurring_toggle label[data-baseweb='checkbox'] > span:first-child::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 7px;
+    background-image:
+        var(--recurring-wave-image, linear-gradient(transparent, transparent)),
+        linear-gradient(90deg, #23a88e 0%, #23a88e 35%, #f14c4a 65%, #f14c4a 100%);
+    background-size: 36px 100%, 300% 100%;
+    background-repeat: no-repeat;
+    background-position: var(--recurring-wave) 0%, var(--recurring-tint) 0%;
+    transform: translate(-50%, -50%);
+    transition:
+        transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+        --recurring-tint 0.5s ease;
+}
+
+/* Hover wave over the minus: a green band in the candle color running along the bar. The minus is rotated
+   180deg, so the animation runs in reverse to travel left to right on screen. */
+.st-key-backtest_recurring_toggle label[data-baseweb='checkbox']:has(input[aria-checked='true']):hover > span:first-child::before {
+    animation: btc-recurring-wave 1.1s ease-in-out reverse;
+}
+
+/* Hover wave over the plus: one red band in the candle color crossing the whole symbol diagonally, drawn on
+   an overlay masked to the plus shape so it spans both bars. */
+.st-key-backtest_recurring_toggle label[data-baseweb='checkbox']::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 44px;
+    height: 44px;
+    margin-top: -22px;
+    background-image: linear-gradient(135deg, transparent 33%, #e4474d 50%, transparent 67%);
+    background-size: 300% 300%;
+    background-repeat: no-repeat;
+    background-position: 100% 100%;
+    -webkit-mask:
+        linear-gradient(#000, #000) center / 40px 7px no-repeat,
+        linear-gradient(#000, #000) center / 7px 40px no-repeat;
+    mask:
+        linear-gradient(#000, #000) center / 40px 7px no-repeat,
+        linear-gradient(#000, #000) center / 7px 40px no-repeat;
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease;
+}
+
+.st-key-backtest_recurring_toggle label[data-baseweb='checkbox']:hover::after {
+    opacity: 1;
+    transform: scale(1.06);
+    animation: btc-recurring-diagonal-wave 1.1s ease-in-out forwards;
+}
+
+.st-key-backtest_recurring_toggle label[data-baseweb='checkbox']:has(input[aria-checked='true'])::after {
+    display: none;
+}
+
+.st-key-backtest_recurring_toggle label[data-baseweb='checkbox'] > span:first-child::after {
+    transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.st-key-backtest_recurring_toggle label[data-baseweb='checkbox']:hover > span:first-child {
+    transform: scale(1.06);
+}
+
+.st-key-backtest_recurring_toggle label[data-baseweb='checkbox']:has(input[aria-checked='true']) {
+    --recurring-wave-image: linear-gradient(90deg, transparent 0%, #159b87 50%, transparent 100%);
+}
+
+.st-key-backtest_recurring_toggle label[data-baseweb='checkbox']:has(input[aria-checked='true']) > span:first-child {
+    transform: rotate(180deg);
+}
+
+.st-key-backtest_recurring_toggle label[data-baseweb='checkbox']:has(input[aria-checked='true']) > span:first-child::before,
+.st-key-backtest_recurring_toggle label[data-baseweb='checkbox']:has(input[aria-checked='true']) > span:first-child::after {
+    --recurring-tint: 100%;
+}
+
+.st-key-backtest_recurring_toggle label[data-baseweb='checkbox']:has(input[aria-checked='true']):hover > span:first-child {
+    /* A thin minus needs a larger scale than the plus for the growth to read the same. */
+    transform: rotate(180deg) scale(1.15);
+}
+
+.st-key-backtest_recurring_toggle label[data-baseweb='checkbox']:has(input[aria-checked='true']) > span:first-child::after {
+    transform: translate(-50%, -50%) rotate(90deg) scaleX(0);
+}
+
+.st-key-backtest_recurring_toggle [data-testid='stMarkdownContainer'] p {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+/* Swapped in CSS: changing the checkbox label in Python would reset the widget. */
+.st-key-backtest_recurring_toggle label:has(input[aria-checked='true']) [data-testid='stMarkdownContainer'] p {
+    position: relative;
+    visibility: hidden;
+}
+
+.st-key-backtest_recurring_toggle label:has(input[aria-checked='true']) [data-testid='stMarkdownContainer'] p::after {
+    content: 'Remove recurring buys';
+    position: absolute;
+    top: 0;
+    left: 0;
+    white-space: nowrap;
+    visibility: visible;
+}
+
+/* The recurring buy fields stay rendered and slide open while the checkbox is checked.
+   While closed, the negative margin cancels the column gap above the hidden fields. */
+[data-testid='stVerticalBlockBorderWrapper']:has(> div > .st-key-backtest_recurring_fields) {
+    margin-top: -1rem;
+    transition: margin-top 0.35s ease;
+}
+
+.st-key-backtest_recurring:has(.st-key-backtest_recurring_toggle input[aria-checked='true'])
+[data-testid='stVerticalBlockBorderWrapper']:has(> div > .st-key-backtest_recurring_fields) {
+    margin-top: 0;
+}
+
+.st-key-backtest_recurring_fields {
+    display: grid !important;
+    gap: 0 !important;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+        grid-template-rows 0.35s ease,
+        opacity 0.25s ease,
+        visibility 0s linear 0.35s;
+}
+
+.st-key-backtest_recurring_fields > * {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.st-key-backtest_recurring:has(.st-key-backtest_recurring_toggle input[aria-checked='true']) .st-key-backtest_recurring_fields {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    visibility: visible;
+    transition:
+        grid-template-rows 0.35s ease,
+        opacity 0.35s ease 0.05s,
+        visibility 0s;
+}
+
+.st-key-backtest_investment_control,
+.st-key-backtest_recurring_amount_control {
     position: relative;
     gap: 0;
 }
 
-.st-key-backtest_investment_control input {
+.st-key-backtest_investment_control input,
+.st-key-backtest_recurring_amount_control input {
     padding-right: 88px !important;
 }
 
-.st-key-backtest_investment_decrease,
-.st-key-backtest_investment_increase {
+.st-key-backtest_investment_control_decrease,
+.st-key-backtest_investment_control_increase,
+.st-key-backtest_recurring_amount_control_decrease,
+.st-key-backtest_recurring_amount_control_increase {
     position: absolute;
     bottom: 0;
     width: 40px;
@@ -103,24 +526,32 @@ section[data-testid='stSidebar'] div[role='radiogroup'] label p {
     z-index: 1;
 }
 
-.st-key-backtest_investment_decrease {
+.st-key-backtest_investment_control_decrease,
+.st-key-backtest_recurring_amount_control_decrease {
     right: 40px;
 }
 
-.st-key-backtest_investment_increase {
+.st-key-backtest_investment_control_increase,
+.st-key-backtest_recurring_amount_control_increase {
     right: 0;
 }
 
 .st-key-backtest_decrease,
 .st-key-backtest_increase,
+.st-key-backtest_recurring_decrease,
+.st-key-backtest_recurring_increase,
 .st-key-backtest_decrease [data-testid="stButton"],
-.st-key-backtest_increase [data-testid="stButton"] {
+.st-key-backtest_increase [data-testid="stButton"],
+.st-key-backtest_recurring_decrease [data-testid="stButton"],
+.st-key-backtest_recurring_increase [data-testid="stButton"] {
     width: 40px !important;
     max-width: 40px;
 }
 
-.st-key-backtest_investment_decrease button,
-.st-key-backtest_investment_increase button {
+.st-key-backtest_investment_control_decrease button,
+.st-key-backtest_investment_control_increase button,
+.st-key-backtest_recurring_amount_control_decrease button,
+.st-key-backtest_recurring_amount_control_increase button {
     width: 40px;
     min-width: 0;
     height: 40px;
@@ -130,21 +561,27 @@ section[data-testid='stSidebar'] div[role='radiogroup'] label p {
     box-shadow: none;
 }
 
-.st-key-backtest_investment_decrease button:hover,
-.st-key-backtest_investment_increase button:hover {
+.st-key-backtest_investment_control_decrease button:hover,
+.st-key-backtest_investment_control_increase button:hover,
+.st-key-backtest_recurring_amount_control_decrease button:hover,
+.st-key-backtest_recurring_amount_control_increase button:hover {
     background: rgba(0, 0, 0, 0.06);
 }
 
 .footer {
     position: fixed;
     bottom: 8px;
-    padding-top: 80px;
-    padding-left: 80px;
-    left: 0;
-    width: 100%;
-    text-align: left;
+    right: 24px;
+    width: auto;
+    text-align: right;
     font-size: 12px;
-    color: #9aa0a6;
-    opacity: 0.7;
+    color: inherit;
+    opacity: 0.55;
     pointer-events: none;
+    padding-bottom: 16px;
+    padding-right: 16px;
+}
+
+.st-key-price_chart_marker_bridge {
+    display: none;
 }
