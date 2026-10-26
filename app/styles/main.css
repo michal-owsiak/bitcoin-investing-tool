@@ -64,6 +64,13 @@ body.btc-dark-theme [data-testid="stHeader"] {
     background-color: var(--dark-background) !important;
 }
 
+/* Cache spinners ("Fetching whale inflow...") fade out on a gradient of the stock background. */
+body.btc-dark-theme .stCacheSpinner {
+    background: linear-gradient(
+        to bottom, var(--dark-background) 0%, var(--dark-background) 80%, transparent 100%
+    ) !important;
+}
+
 body.btc-dark-theme [data-testid="stSidebar"],
 body.btc-dark-theme [data-baseweb="select"] > div,
 body.btc-dark-theme [data-baseweb="input"],
